@@ -1,0 +1,30 @@
+name: 뉴스 서치 메일 발송
+
+on:
+  schedule:
+    - cron: '30 0 * * 1-5'   # 매주 월~금 09:30 KST (UTC 00:30)
+  workflow_dispatch:           # 수동 실행 버튼도 활성화
+
+jobs:
+  send-news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 라이브러리 설치
+        run: pip install anthropic
+
+      - name: 뉴스 서치 및 메일 발송
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NAVER_ID:          ${{ secrets.NAVER_ID }}
+          NAVER_PASSWORD:    ${{ secrets.NAVER_PASSWORD }}
+          MAIL_TO:           ${{ secrets.MAIL_TO }}
+          KEYWORDS:          ${{ secrets.KEYWORDS }}
+        run: python news_mailer.py
