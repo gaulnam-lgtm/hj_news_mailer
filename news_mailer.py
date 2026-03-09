@@ -7,8 +7,8 @@ from urllib.request import urlopen, Request
 from urllib.parse import quote
 
 # ── 설정 ────────────────────────────────────────────────────
-NAVER_ID = os.environ["NAVER_ID"]
-NAVER_PW = os.environ["NAVER_PASSWORD"]
+GMAIL_ID = os.environ["GMAIL_ID"]
+GMAIL_PW = os.environ["GMAIL_APP_PASSWORD"]
 MAIL_TO  = os.environ["MAIL_TO"]
 KEYWORDS = json.loads(os.environ["KEYWORDS"])
 
@@ -113,12 +113,12 @@ def to_html(all_articles):
 def send_mail(html):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[뉴스 서치] {today} 주간 동향"
-    msg["From"]    = f"{NAVER_ID}@naver.com"
+    msg["From"]    = f"{GMAIL_ID}@gmail.com"
     msg["To"]      = MAIL_TO
     msg.attach(MIMEText(html, "html", "utf-8"))
 
-    with smtplib.SMTP_SSL("smtp.naver.com", 465) as s:
-        s.login(NAVER_ID, NAVER_PW)
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
+        s.login(GMAIL_ID, GMAIL_PW)
         s.send_message(msg)
     print(f"✅ 메일 발송 완료 → {MAIL_TO}")
 
