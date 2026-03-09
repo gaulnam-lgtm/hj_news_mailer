@@ -17,14 +17,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 라이브러리 설치
-        run: pip install anthropic
-
       - name: 뉴스 서치 및 메일 발송
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          NAVER_ID:          ${{ secrets.NAVER_ID }}
-          NAVER_PASSWORD:    ${{ secrets.NAVER_PASSWORD }}
-          MAIL_TO:           ${{ secrets.MAIL_TO }}
-          KEYWORDS:          ${{ secrets.KEYWORDS }}
+          NAVER_ID:       ${{ secrets.NAVER_ID }}
+          NAVER_PASSWORD: ${{ secrets.NAVER_PASSWORD }}
+          MAIL_TO:        ${{ secrets.MAIL_TO }}
+          KEYWORDS:       ${{ secrets.KEYWORDS }}
         run: python news_mailer.py
