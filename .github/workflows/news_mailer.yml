@@ -19,8 +19,8 @@ jobs:
 
       - name: 뉴스 서치 및 메일 발송
         env:
-          NAVER_ID:       ${{ secrets.NAVER_ID }}
-          NAVER_PASSWORD: ${{ secrets.NAVER_PASSWORD }}
+          GMAIL_ID:           ${{ secrets.GMAIL_ID }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           MAIL_TO:        ${{ secrets.MAIL_TO }}
           KEYWORDS:       ${{ secrets.KEYWORDS }}
         run: python news_mailer.py
