@@ -5,6 +5,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from urllib.request import urlopen, Request
 from urllib.parse import quote
+import requests
+from bs4 import BeautifulSoup
 
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
@@ -18,49 +20,35 @@ week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 # ── 기사 본문에서 요약 추출 ─────────────────────────────────
 def fetch_summary(url):
     try:
-        import urllib.request
-        # 리다이렉트 따라가기
-        req = urllib.request.Request(url, headers={
+        headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0",
             "Accept": "text/html,application/xhtml+xml",
             "Accept-Language": "ko-KR,ko;q=0.9",
-        })
-        resp = urllib.request.urlopen(req, timeout=10)
-        raw = resp.read()
+        }
+        resp = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
+        resp.encoding = resp.apparent_encoding
+        soup = BeautifulSoup(resp.text, "html.parser")
 
-        # 인코딩 감지
-        for enc in ("utf-8", "euc-kr", "cp949"):
-            try:
-                html = raw.decode(enc)
-                break
-            except Exception:
-                continue
-        else:
-            html = raw.decode("utf-8", errors="ignore")
+        # 불필요한 태그 제거
+        for tag in soup(["script", "style", "nav", "header", "footer", "aside", "figure"]):
+            tag.decompose()
 
-        # 본문 영역 우선 추출 (article, main, .content 등)
-        body = ""
-        for pattern in [
-            r"<article[^>]*>(.*?)</article>",
-            r"<main[^>]*>(.*?)</main>",
-            r'<div[^>]+class="[^"]*(?:article|content|body|text)[^"]*"[^>]*>(.*?)</div>',
-        ]:
-            m = re.search(pattern, html, re.DOTALL | re.IGNORECASE)
-            if m:
-                body = m.group(1)
-                break
+        # 본문 영역 우선 탐색
+        body = (
+            soup.find("article") or
+            soup.find(attrs={"class": re.compile(r"article|content|body|news_text|article_body", re.I)}) or
+            soup.find("main") or
+            soup.body
+        )
+
         if not body:
-            body = html
+            return ""
 
-        # 스크립트/스타일 제거 후 텍스트 추출
-        body = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", body, flags=re.DOTALL)
-        body = re.sub(r"<[^>]+>", " ", body)
-        body = re.sub(r"\s+", " ", body).strip()
-
-        # 30자 이상 문장만 필터링
-        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", body) if len(s.strip()) > 30]
-        summary = " ".join(sentences[:3])
-        return summary[:300] if summary else ""
+        # 문장 추출 (30자 이상)
+        text = body.get_text(separator=" ", strip=True)
+        text = re.sub(r"\s+", " ", text)
+        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if len(s.strip()) > 30]
+        return " ".join(sentences[:3])[:300]
     except Exception:
         return ""
 
