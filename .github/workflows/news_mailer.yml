@@ -2,7 +2,7 @@ name: 뉴스 서치 메일 발송
 
 on:
   schedule:
-    - cron: '0 0 * * 1-5'   # 매주 월~금 09:00 KST (UTC 00:00)
+    - cron: '50 0 * * 1-5'   # 매주 월~금 09:30 KST (UTC 00:30)
   workflow_dispatch:           # 수동 실행 버튼도 활성화
 
 jobs:
@@ -16,6 +16,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: 라이브러리 설치
+        run: pip install requests beautifulsoup4
 
       - name: 뉴스 서치 및 메일 발송
         env:
