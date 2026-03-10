@@ -128,11 +128,11 @@ def to_html(all_articles):
             cards_html += f"""
             <tr>
               <td style="padding:0 36px 8px 36px;">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-                       style="border:1.5px solid {color}40;border-radius:14px;overflow:hidden;">
+                <div style="border:1.5px solid {color}55;border-radius:14px;overflow:hidden;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                   <tr>
                     <td width="5" style="background-color:{color};">&nbsp;</td>
-                    <td style="padding:11px 18px;">
+                    <td style="padding:11px 18px;background-color:#ffffff;">
                       <div style="margin-bottom:5px;">
                         <span style="display:inline-block;background-color:{tag_bg};color:{color};
                                      font-size:11px;line-height:17px;font-weight:700;
@@ -156,6 +156,7 @@ def to_html(all_articles):
                     </td>
                   </tr>
                 </table>
+                </div>
               </td>
             </tr>"""
 
