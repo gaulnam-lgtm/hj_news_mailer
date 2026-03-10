@@ -61,101 +61,152 @@ def fetch_articles(keyword):
     return articles[:3]
 
 # ── HTML 변환 ───────────────────────────────────────────────
+POLICY_KEYWORDS = ["수수료", "정책", "규제", "법", "인하", "허용", "금지", "의무", "심사", "결제"]
+
 def to_html(all_articles):
-    # 핵심 요약 — 요약문 첫 문장 기반, 개조식, 최대 4개
-    summary_items = ""
-    count = 0
-    seen = set()
+    # 핵심 요약 — 정책/수수료 관련 우선, 최대 3개, 개조식
+    all_items = []
     for kw, articles in all_articles.items():
-        if count >= 4:
-            break
         for a in articles:
-            if count >= 4:
-                break
             src = a.get("summary") or a.get("title", "")
             sent = re.split(r"(?<=[.!?])\s+", src.strip())
-            line = sent[0].strip()
-            # 개조식: 마침표 제거, 명사형으로 끊기
-            line = re.sub(r"[.。]+$", "", line)[:60]
-            if line and line not in seen:
-                seen.add(line)
-                summary_items += f'<li style="margin-bottom:7px;color:#374151;font-size:14px;line-height:1.6;">{line}</li>'
-                count += 1
+            line = re.sub(r"[.。]+$", "", sent[0].strip())[:60] if sent else ""
+            if not line:
+                continue
+            priority = sum(1 for pk in POLICY_KEYWORDS if pk in line or pk in a.get("title",""))
+            all_items.append((priority, line))
+
+    # 중복 제거 후 우선순위 정렬
+    seen = set()
+    summary_items = ""
+    count = 0
+    for _, line in sorted(all_items, key=lambda x: -x[0]):
+        if count >= 3 or line in seen:
+            continue
+        seen.add(line)
+        summary_items += f'<div style="font-size:15px;line-height:26px;color:#334155;">• {line}</div>'
+        count += 1
 
     # 키워드별 고정 색상
-    kw_colors = {}
     palette = ["#4f46e5","#db2777","#d97706","#059669","#2563eb","#dc2626","#7c3aed","#0891b2"]
-    for i, kw in enumerate(all_articles.keys()):
-        kw_colors[kw] = palette[i % len(palette)]
+    kw_colors = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
 
     # 기사 카드
     cards_html = ""
     for kw, articles in all_articles.items():
         color = kw_colors[kw]
+        tag_bg = color + "18"
         for a in articles:
             cards_html += f"""
-            <div style="background:#fff;border-radius:12px;padding:20px 28px;margin-bottom:18px;
-                        box-shadow:0 1px 8px rgba(0,0,0,.07);border-left:5px solid {color};">
-              <span style="display:inline-block;background:{color}18;color:{color};
-                           border-radius:20px;padding:2px 12px;font-size:12px;font-weight:700;
-                           margin-bottom:10px;">{kw}</span>
-              <h3 style="margin:0 0 8px;font-size:17px;font-weight:800;
-                         font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-                         color:#111827;line-height:1.5;">{a['title']}</h3>
-              <p style="margin:0 0 12px;font-size:13.5px;color:#4b5563;line-height:1.75;">{a['summary'] or '원문 링크를 확인해주세요.'}</p>
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-size:11.5px;color:#9ca3af;">{a['date']}{' · ' + a['press'] if a.get('press') else ''}</span>
-                <a href="{a['link']}" style="display:inline-flex;align-items:center;gap:6px;
-                   background:#111827;color:#ffffff;border-radius:8px;padding:7px 16px;
-                   font-size:13px;font-weight:600;text-decoration:none;">🔗 기사보기</a>
-              </div>
-            </div>"""
+            <tr>
+              <td style="padding:0 36px 16px 36px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+                       style="border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
+                  <tr>
+                    <td width="6" style="background-color:{color};border-radius:16px 0 0 16px;">&nbsp;</td>
+                    <td style="padding:20px 24px;">
+                      <div style="margin-bottom:8px;">
+                        <span style="display:inline-block;background-color:{tag_bg};color:{color};
+                                     font-size:12px;line-height:18px;font-weight:700;
+                                     padding:4px 10px;border-radius:999px;">{kw}</span>
+                      </div>
+                      <div style="font-size:18px;line-height:28px;color:#111827;font-weight:800;
+                                  font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
+                        {a['title']}
+                      </div>
+                      <div style="padding-top:8px;font-size:14px;line-height:23px;color:#4b5563;">
+                        {a['summary'] or '원문 링크를 확인해주세요.'}
+                      </div>
+                      <div style="padding-top:12px;font-size:13px;line-height:20px;color:#94a3b8;">
+                        {a['date']}{' · ' + a['press'] if a.get('press') else ''}
+                      </div>
+                      <div style="padding-top:14px;">
+                        <a href="{a['link']}" style="display:inline-block;background-color:#111827;
+                           color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;
+                           padding:10px 16px;border-radius:10px;">🔗 기사보기</a>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>"""
 
     return f"""
-    <html><body style="margin:0;padding:0;background:#e8f4fd;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
-    <div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+    <html>
+    <body style="margin:0;padding:0;background-color:#f3f6fb;
+                 font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#1f2937;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+           style="background-color:#f3f6fb;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+                 style="max-width:760px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
 
-      <!-- 헤더 -->
-      <div style="background:linear-gradient(to right,#0f1f3d 0%,#1a3a6b 45%,#1e4d9b 100%);
-                  border-radius:16px 16px 0 0;padding:22px 40px;margin-bottom:0;">
-        <p style="color:#a9c3ff;font-size:14px;font-weight:700;letter-spacing:0.4px;margin:0 0 6px;">
-          WEEKLY APP MARKET NEWS
-        </p>
-        <h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:800;
-                   font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;line-height:1.3;">
-          이번주 앱마켓 동향 기사
-        </h1>
-        <p style="color:#dbeafe;margin:0;font-size:15px;font-weight:400;">
-          검색 범위 : {week_ago} ~ {today}
-        </p>
-      </div>
+            <!-- 헤더 -->
+            <tr>
+              <td style="background-color:#16233b;padding:28px 36px;">
+                <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">
+                  WEEKLY APP MARKET NEWS
+                </div>
+                <div style="padding-top:8px;font-size:30px;line-height:38px;color:#ffffff;font-weight:800;
+                            font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
+                  🗞 이번주 앱마켓 동향 기사
+                </div>
+                <div style="padding-top:10px;font-size:15px;line-height:22px;color:#dbeafe;">
+                  검색 범위 : {week_ago} ~ {today}
+                </div>
+              </td>
+            </tr>
 
-      <!-- 인사말 -->
-      <p style="margin:18px 4px 20px;color:#374151;font-size:14px;line-height:1.8;">
-        안녕하세요.<br>
-        이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.
-      </p>
+            <!-- 인트로 -->
+            <tr>
+              <td style="padding:24px 36px 8px 36px;font-size:15px;line-height:24px;color:#475569;">
+                안녕하세요.<br>
+                이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.
+              </td>
+            </tr>
 
-      <!-- 핵심 요약 -->
-      <div style="background:#fff;border-radius:12px;padding:22px 28px;margin-bottom:26px;
-                  box-shadow:0 1px 6px rgba(0,0,0,.06);">
-        <h2 style="margin:0 0 14px;font-size:16px;color:#1e293b;font-weight:700;">🔍 이번주 핵심 요약</h2>
-        <ul style="margin:0;padding-left:20px;">
-          {summary_items if summary_items else '<li style="color:#9ca3af;">이번 주 주요 내용을 찾지 못했습니다.</li>'}
-        </ul>
-      </div>
+            <!-- 핵심 요약 -->
+            <tr>
+              <td style="padding:16px 36px 8px 36px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+                       style="background-color:#e8f4fd;border:1px solid #bfdbfe;border-radius:16px;">
+                  <tr>
+                    <td style="padding:20px 24px;">
+                      <div style="font-size:17px;line-height:26px;font-weight:800;color:#0f172a;margin-bottom:12px;">
+                        🔎 이번주 핵심 요약
+                      </div>
+                      {summary_items if summary_items else '<div style="font-size:14px;color:#94a3b8;">이번 주 주요 내용을 찾지 못했습니다.</div>'}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
 
-      <!-- 주요 기사 -->
-      <h2 style="font-size:18px;color:#1e293b;font-weight:800;margin:0 0 16px;">
-        📰 주요 기사
-      </h2>
-      {cards_html if cards_html else '<p style="color:#94a3b8;">이번 주 관련 기사를 찾지 못했습니다.</p>'}
+            <!-- 주요기사 타이틀 -->
+            <tr>
+              <td style="padding:24px 36px 12px 36px;">
+                <div style="font-size:22px;line-height:30px;font-weight:800;color:#0f172a;">
+                  📰 주요 기사
+                </div>
+              </td>
+            </tr>
 
-      <!-- 푸터 -->
-      <div style="text-align:center;padding:20px;color:#9ca3af;font-size:12px;">
-        자동 발송 · {today} · 네이버 뉴스
-      </div>
-    </div>
+            <!-- 기사 카드들 -->
+            {cards_html if cards_html else '<tr><td style="padding:0 36px 24px;color:#94a3b8;">이번 주 관련 기사를 찾지 못했습니다.</td></tr>'}
+
+            <!-- 푸터 -->
+            <tr>
+              <td style="border-top:1px solid #e5e7eb;padding:20px 36px 28px 36px;
+                         font-size:13px;line-height:22px;color:#94a3b8;">
+                자동 발송 · {today} · 네이버 뉴스
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
     </body></html>"""
 
 # ── 메일 발송 ───────────────────────────────────────────────
