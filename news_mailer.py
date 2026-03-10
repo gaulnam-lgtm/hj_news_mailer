@@ -434,7 +434,7 @@ def to_html(all_articles):
               <tr>
                 <td style="border-top:1px solid #e5e7eb;padding:20px 36px 28px 36px;
                            font-size:13px;line-height:22px;color:#94a3b8;">
-                  자동 발송 · {today} · 네이버 뉴스
+                  자동 발송 · {today} · 
                 </td>
               </tr>
 
