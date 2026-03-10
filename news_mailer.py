@@ -129,7 +129,7 @@ def to_html(all_articles):
             <tr>
               <td style="padding:0 36px 8px 36px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-                       style="border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+                       style="border:1.5px solid {color}40;border-radius:14px;overflow:hidden;">
                   <tr>
                     <td width="5" style="background-color:{color};">&nbsp;</td>
                     <td style="padding:11px 18px;">
