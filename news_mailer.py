@@ -7,6 +7,7 @@ from urllib.request import urlopen, Request
 from urllib.parse import quote
 import trafilatura
 import urllib.request
+from newspaper import Article
 
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
@@ -28,18 +29,31 @@ def resolve_url(url):
 
 # ── 기사 본문에서 요약 추출 ─────────────────────────────────
 def fetch_summary(url):
+    # 방법 1: newspaper3k
+    try:
+        real_url = resolve_url(url)
+        article = Article(real_url, language="ko")
+        article.download()
+        article.parse()
+        article.nlp()
+        if article.summary and len(article.summary) > 20:
+            return article.summary[:300]
+    except Exception:
+        pass
+
+    # 방법 2: trafilatura 폴백
     try:
         real_url = resolve_url(url)
         downloaded = trafilatura.fetch_url(real_url)
-        if not downloaded:
-            return ""
-        text = trafilatura.extract(downloaded, include_comments=False, include_tables=False)
-        if not text:
-            return ""
-        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if len(s.strip()) > 20]
-        return " ".join(sentences[:3])[:300]
+        if downloaded:
+            text = trafilatura.extract(downloaded, include_comments=False, include_tables=False)
+            if text:
+                sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if len(s.strip()) > 20]
+                return " ".join(sentences[:3])[:300]
     except Exception:
-        return ""
+        pass
+
+    return ""
 
 # ── Google News RSS 서치 ────────────────────────────────────
 def fetch_articles(keyword):
