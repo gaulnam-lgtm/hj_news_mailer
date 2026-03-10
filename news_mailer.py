@@ -6,9 +6,13 @@ from email.mime.text import MIMEText
 from urllib.request import urlopen, Request
 from urllib.parse import quote
 import trafilatura
-import urllib.request
-import urllib.error
+import requests
 from html.parser import HTMLParser
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0",
+    "Accept-Language": "ko-KR,ko;q=0.9",
+}
 
 # ── og:description 파서 ──────────────────────────────────────
 class MetaParser(HTMLParser):
@@ -20,9 +24,9 @@ class MetaParser(HTMLParser):
         if tag == "meta":
             d = dict(attrs)
             if d.get("property") in ("og:description", "twitter:description") \
-               or d.get("name") in ("description", "og:description"):
+               or d.get("name") in ("description",):
                 val = d.get("content", "").strip()
-                if val and len(val) > self.description.__len__():
+                if val and len(val) > len(self.description):
                     self.description = val
 
 # ── 설정 ────────────────────────────────────────────────────
@@ -37,10 +41,11 @@ week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 # ── Google 리다이렉트 URL → 실제 기사 URL 추출 ──────────────
 def resolve_url(url):
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        resp = urllib.request.urlopen(req, timeout=10)
-        return resp.geturl()
-    except Exception:
+        resp = requests.get(url, headers=HEADERS, timeout=10, allow_redirects=True)
+        print(f"    resolve: {url[:60]} → {resp.url[:60]}")
+        return resp.url
+    except Exception as e:
+        print(f"    resolve 실패: {e}")
         return url
 
 # ── 기사 본문에서 요약 추출 ─────────────────────────────────
@@ -48,26 +53,17 @@ def fetch_summary(url):
     # 방법 1: og:description 메타태그
     try:
         real_url = resolve_url(url)
-        req = urllib.request.Request(real_url, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-            "Accept-Language": "ko-KR,ko;q=0.9",
-        })
-        raw = urllib.request.urlopen(req, timeout=10).read(30000)
-        for enc in ("utf-8", "euc-kr", "cp949"):
-            try:
-                html = raw.decode(enc)
-                break
-            except Exception:
-                continue
-        else:
-            html = raw.decode("utf-8", errors="ignore")
+        resp = requests.get(real_url, headers=HEADERS, timeout=10, allow_redirects=True)
+        resp.encoding = resp.apparent_encoding
+        html = resp.text[:15000]
 
         parser = MetaParser()
-        parser.feed(html[:10000])  # head 부분만 파싱
+        parser.feed(html)
+        print(f"    og:description: {parser.description[:80] if parser.description else '없음'}")
         if parser.description and len(parser.description) > 20:
             return parser.description[:300]
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"    og 추출 실패: {e}")
 
     # 방법 2: trafilatura 폴백
     try:
@@ -77,9 +73,11 @@ def fetch_summary(url):
             text = trafilatura.extract(downloaded, include_comments=False, include_tables=False)
             if text:
                 sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if len(s.strip()) > 20]
-                return " ".join(sentences[:3])[:300]
-    except Exception:
-        pass
+                result = " ".join(sentences[:3])[:300]
+                print(f"    trafilatura: {result[:80]}")
+                return result
+    except Exception as e:
+        print(f"    trafilatura 실패: {e}")
 
     return ""
 
