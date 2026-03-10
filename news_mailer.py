@@ -91,7 +91,7 @@ def to_html(all_articles):
     <html><body style="margin:0;padding:0;background:#f5f7fa;font-family:'Malgun Gothic',sans-serif;">
     <div style="max-width:800px;margin:0 auto;">
       <div style="background:#1e293b;padding:24px 32px;">
-        <h1 style="color:#fff;margin:0;font-size:22px;">📰 오늘의 뉴스 서치</h1>
+        <h1 style="color:#fff;margin:0;font-size:22px;">📰 이번주 앱마켓 동향 기사</h1>
         <p style="color:#94a3b8;margin:6px 0 0;font-size:13px;">
           검색 범위: <strong style="color:#cbd5e1;">{week_ago} ~ {today}</strong>
         </p>
@@ -108,7 +108,7 @@ def to_html(all_articles):
 # ── 메일 발송 ───────────────────────────────────────────────
 def send_mail(html):
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[뉴스 서치] {today} 주간 동향"
+    msg["Subject"] = f"[이번주 앱마켓 동향 기사] {today}"
     msg["From"]    = f"{GMAIL_ID}@gmail.com"
     msg["To"]      = MAIL_TO
     msg.attach(MIMEText(html, "html", "utf-8"))
