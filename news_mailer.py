@@ -113,14 +113,13 @@ def fetch_articles(keyword):
 
 # ── HTML 변환 ───────────────────────────────────────────────
 def to_html(all_articles):
-    kw_tags = "".join(
-        f'<span style="background:#eff6ff;color:#2563eb;border-radius:20px;'
-        f'padding:4px 12px;font-size:13px;font-weight:600;margin:3px;">{k}</span>'
-        for k in KEYWORDS
+    # 기사 있는 키워드 먼저, 없는 키워드 뒤로 정렬
+    sorted_articles = dict(
+        sorted(all_articles.items(), key=lambda x: 0 if x[1] else 1)
     )
 
     sections = []
-    for kw, articles in all_articles.items():
+    for kw, articles in sorted_articles.items():
         cards = ""
         if not articles:
             cards = '<p style="color:#94a3b8;font-size:13px;">최근 1주일 내 관련 기사를 찾지 못했습니다.</p>'
@@ -157,7 +156,6 @@ def to_html(all_articles):
         </p>
       </div>
       <div style="padding:24px 16px;">
-        <div style="margin-bottom:24px;">{kw_tags}</div>
         {''.join(sections)}
       </div>
       <div style="text-align:center;padding:16px;color:#94a3b8;font-size:12px;">
