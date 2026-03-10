@@ -64,27 +64,31 @@ def fetch_articles(keyword):
 POLICY_KEYWORDS = ["수수료", "정책", "규제", "법", "인하", "허용", "금지", "의무", "심사", "결제"]
 
 def to_html(all_articles):
-    # 핵심 요약 — 정책/수수료 관련 우선, 최대 3개, 개조식
+    # 핵심 요약 — 정책/수수료 우선, 최대 3개, 개조식 (완전한 문장으로 끊기)
     all_items = []
     for kw, articles in all_articles.items():
         for a in articles:
-            src = a.get("summary") or a.get("title", "")
-            sent = re.split(r"(?<=[.!?])\s+", src.strip())
-            line = re.sub(r"[.。]+$", "", sent[0].strip())[:60] if sent else ""
-            if not line:
-                continue
-            priority = sum(1 for pk in POLICY_KEYWORDS if pk in line or pk in a.get("title",""))
+            title = a.get("title", "")
+            src   = a.get("summary") or title
+            # 완전한 문장 단위로 분리
+            sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", src.strip()) if len(s.strip()) > 15]
+            line  = sents[0] if sents else title
+            line  = re.sub(r"[.。]+$", "", line).strip()
+            # 너무 길면 자연스러운 끊김 위치에서 자르기
+            if len(line) > 55:
+                cut = line[:55].rfind(" ")
+                line = line[:cut] + "…" if cut > 30 else line[:55] + "…"
+            priority = sum(1 for pk in POLICY_KEYWORDS if pk in line or pk in title)
             all_items.append((priority, line))
 
-    # 중복 제거 후 우선순위 정렬
     seen = set()
-    summary_items = ""
+    summary_html = ""
     count = 0
     for _, line in sorted(all_items, key=lambda x: -x[0]):
         if count >= 3 or line in seen:
             continue
         seen.add(line)
-        summary_items += f'<div style="font-size:15px;line-height:26px;color:#334155;">• {line}</div>'
+        summary_html += f'<div style="font-size:15px;line-height:26px;color:#334155;margin-bottom:4px;">• {line}</div>'
         count += 1
 
     # 키워드별 고정 색상
@@ -94,8 +98,8 @@ def to_html(all_articles):
     # 기사 카드
     cards_html = ""
     for kw, articles in all_articles.items():
-        color = kw_colors[kw]
-        tag_bg = color + "18"
+        color   = kw_colors[kw]
+        tag_bg  = color + "18"
         for a in articles:
             cards_html += f"""
             <tr>
@@ -103,7 +107,7 @@ def to_html(all_articles):
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
                        style="border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
                   <tr>
-                    <td width="6" style="background-color:{color};border-radius:16px 0 0 16px;">&nbsp;</td>
+                    <td width="6" style="background-color:{color};">&nbsp;</td>
                     <td style="padding:20px 24px;">
                       <div style="margin-bottom:8px;">
                         <span style="display:inline-block;background-color:{tag_bg};color:{color};
@@ -120,7 +124,7 @@ def to_html(all_articles):
                       <div style="padding-top:12px;font-size:13px;line-height:20px;color:#94a3b8;">
                         {a['date']}{' · ' + a['press'] if a.get('press') else ''}
                       </div>
-                      <div style="padding-top:14px;">
+                      <div style="padding-top:14px;text-align:right;">
                         <a href="{a['link']}" style="display:inline-block;background-color:#111827;
                            color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;
                            padding:10px 16px;border-radius:10px;">🔗 기사보기</a>
@@ -140,17 +144,18 @@ def to_html(all_articles):
       <tr>
         <td align="center" style="padding:32px 16px;">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-                 style="max-width:760px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
+                 style="max-width:1000px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
 
             <!-- 헤더 -->
             <tr>
-              <td style="background-color:#16233b;padding:28px 36px;">
+              <td style="background:linear-gradient(to right,#0f1f3d 0%,#1a3a6b 50%,#1e4d9b 100%);
+                         padding:28px 36px;">
                 <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">
                   WEEKLY APP MARKET NEWS
                 </div>
                 <div style="padding-top:8px;font-size:30px;line-height:38px;color:#ffffff;font-weight:800;
                             font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
-                  🗞 이번주 앱마켓 동향 기사
+                  📊 이번주 앱마켓 동향 기사
                 </div>
                 <div style="padding-top:10px;font-size:15px;line-height:22px;color:#dbeafe;">
                   검색 범위 : {week_ago} ~ {today}
@@ -176,7 +181,7 @@ def to_html(all_articles):
                       <div style="font-size:17px;line-height:26px;font-weight:800;color:#0f172a;margin-bottom:12px;">
                         🔎 이번주 핵심 요약
                       </div>
-                      {summary_items if summary_items else '<div style="font-size:14px;color:#94a3b8;">이번 주 주요 내용을 찾지 못했습니다.</div>'}
+                      {summary_html if summary_html else '<div style="font-size:14px;color:#94a3b8;">이번 주 주요 내용을 찾지 못했습니다.</div>'}
                     </td>
                   </tr>
                 </table>
