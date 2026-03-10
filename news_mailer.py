@@ -134,7 +134,7 @@ def to_html(all_articles):
             cards_html += f"""
             <tr>
               <td style="padding:0 36px 8px 36px;">
-                <div style="border:1.5px solid {color}55;border-radius:14px;overflow:hidden;">
+                <div style="border:1.5px solid #e5e7eb;border-radius:14px;overflow:hidden;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                   <tr>
                     <td width="5" style="background-color:{color};">&nbsp;</td>
