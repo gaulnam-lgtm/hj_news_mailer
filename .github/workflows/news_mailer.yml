@@ -1,8 +1,8 @@
 name: 뉴스 서치 메일 발송
 
 on:
-  schedule:
-    - cron: '50 0 * * 1-5'   # 매주 월~금 09:30 KST (UTC 00:30)
+  repository_dispatch:
+    types: [cron-trigger]
   workflow_dispatch:           # 수동 실행 버튼도 활성화
 
 jobs:
