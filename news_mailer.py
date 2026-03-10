@@ -62,7 +62,7 @@ def fetch_articles(keyword):
 
 # ── HTML 변환 ───────────────────────────────────────────────
 def to_html(all_articles):
-    # 핵심 요약 — 키워드별 첫 기사 요약 첫 문장 추출 후 최대 4개
+    # 핵심 요약 — 요약문 첫 문장 기반, 개조식, 최대 4개
     summary_items = ""
     count = 0
     seen = set()
@@ -73,31 +73,36 @@ def to_html(all_articles):
             if count >= 4:
                 break
             src = a.get("summary") or a.get("title", "")
-            # 첫 문장 추출
             sent = re.split(r"(?<=[.!?])\s+", src.strip())
-            line = sent[0][:80] if sent else src[:80]
+            line = sent[0].strip()
+            # 개조식: 마침표 제거, 명사형으로 끊기
+            line = re.sub(r"[.。]+$", "", line)[:60]
             if line and line not in seen:
                 seen.add(line)
-                summary_items += f'<li style="margin-bottom:9px;color:#374151;font-size:14px;line-height:1.7;">{line}</li>'
+                summary_items += f'<li style="margin-bottom:7px;color:#374151;font-size:14px;line-height:1.6;">{line}</li>'
                 count += 1
+
+    # 키워드별 고정 색상
+    kw_colors = {}
+    palette = ["#4f46e5","#db2777","#d97706","#059669","#2563eb","#dc2626","#7c3aed","#0891b2"]
+    for i, kw in enumerate(all_articles.keys()):
+        kw_colors[kw] = palette[i % len(palette)]
 
     # 기사 카드
     cards_html = ""
-    border_colors = ["#6366f1","#ec4899","#f59e0b","#10b981","#3b82f6","#ef4444","#8b5cf6","#14b8a6"]
-    color_idx = 0
     for kw, articles in all_articles.items():
+        color = kw_colors[kw]
         for a in articles:
-            color = border_colors[color_idx % len(border_colors)]
             cards_html += f"""
-            <div style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:20px;
+            <div style="background:#fff;border-radius:12px;padding:20px 28px;margin-bottom:18px;
                         box-shadow:0 1px 8px rgba(0,0,0,.07);border-left:5px solid {color};">
               <span style="display:inline-block;background:{color}18;color:{color};
-                           border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;
-                           margin-bottom:12px;">{kw}</span>
-              <h3 style="margin:0 0 10px;font-size:17px;font-weight:800;
+                           border-radius:20px;padding:2px 12px;font-size:12px;font-weight:700;
+                           margin-bottom:10px;">{kw}</span>
+              <h3 style="margin:0 0 8px;font-size:17px;font-weight:800;
                          font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
                          color:#111827;line-height:1.5;">{a['title']}</h3>
-              <p style="margin:0 0 14px;font-size:13.5px;color:#4b5563;line-height:1.8;">{a['summary'] or '원문 링크를 확인해주세요.'}</p>
+              <p style="margin:0 0 12px;font-size:13.5px;color:#4b5563;line-height:1.75;">{a['summary'] or '원문 링크를 확인해주세요.'}</p>
               <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-size:11.5px;color:#9ca3af;">{a['date']}{' · ' + a['press'] if a.get('press') else ''}</span>
                 <a href="{a['link']}" style="display:inline-flex;align-items:center;gap:6px;
@@ -105,38 +110,37 @@ def to_html(all_articles):
                    font-size:13px;font-weight:600;text-decoration:none;">🔗 기사보기</a>
               </div>
             </div>"""
-            color_idx += 1
 
     return f"""
     <html><body style="margin:0;padding:0;background:#e8f4fd;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
     <div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
 
       <!-- 헤더 -->
-      <div style="background:linear-gradient(to right, #1e3a5f 0%, #2563eb 60%, #60a5fa 100%);
-                  border-radius:16px 16px 0 0;padding:28px 40px;margin-bottom:0;">
-        <p style="color:#a9c3ff;font-size:14px;font-weight:700;letter-spacing:0.4px;margin:0 0 8px;">
-          WEEKLY MARKET NEWS
+      <div style="background:linear-gradient(to right,#0f1f3d 0%,#1a3a6b 45%,#1e4d9b 100%);
+                  border-radius:16px 16px 0 0;padding:22px 40px;margin-bottom:0;">
+        <p style="color:#a9c3ff;font-size:14px;font-weight:700;letter-spacing:0.4px;margin:0 0 6px;">
+          WEEKLY APP MARKET NEWS
         </p>
-        <h1 style="color:#ffffff;margin:0 0 10px;font-size:30px;font-weight:800;
-                   font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+        <h1 style="color:#ffffff;margin:0 0 8px;font-size:30px;font-weight:800;
+                   font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;line-height:1.3;">
           이번주 앱마켓 동향 기사
         </h1>
         <p style="color:#dbeafe;margin:0;font-size:15px;font-weight:400;">
-          검색 범위 : <strong style="color:#dbeafe;">{week_ago} ~ {today}</strong>
+          검색 범위 : {week_ago} ~ {today}
         </p>
       </div>
 
       <!-- 인사말 -->
-      <p style="margin:20px 4px 20px;color:#374151;font-size:14px;line-height:1.8;">
+      <p style="margin:18px 4px 20px;color:#374151;font-size:14px;line-height:1.8;">
         안녕하세요.<br>
         이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.
       </p>
 
       <!-- 핵심 요약 -->
-      <div style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:28px;
+      <div style="background:#fff;border-radius:12px;padding:22px 28px;margin-bottom:26px;
                   box-shadow:0 1px 6px rgba(0,0,0,.06);">
-        <h2 style="margin:0 0 16px;font-size:16px;color:#1e293b;font-weight:700;">🔍 이번주 핵심 요약</h2>
-        <ul style="margin:0;padding-left:20px;line-height:1.9;">
+        <h2 style="margin:0 0 14px;font-size:16px;color:#1e293b;font-weight:700;">🔍 이번주 핵심 요약</h2>
+        <ul style="margin:0;padding-left:20px;">
           {summary_items if summary_items else '<li style="color:#9ca3af;">이번 주 주요 내용을 찾지 못했습니다.</li>'}
         </ul>
       </div>
