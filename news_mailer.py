@@ -62,33 +62,32 @@ def fetch_articles(keyword):
 
 # ── HTML 변환 ───────────────────────────────────────────────
 POLICY_KEYWORDS = ["수수료", "정책", "규제", "법", "인하", "허용", "금지", "의무", "심사", "결제"]
-# 개조식 변환: 서술어 어미 제거
-STRIP_ENDINGS = ["이다", "했다", "한다", "된다", "있다", "없다", "밝혔다", "전했다", "나타났다",
-                 "보인다", "예정이다", "중이다", "것이다", "하고 있다", "했으며", "했고"]
-# 제거할 접속어/부사 시작 패턴
-BAD_STARTS = ["이에 ", "이를 ", "이후 ", "이와 ", "한편 ", "또한 ", "그러나 ", "하지만 ", "따라서 ", "이같은 "]
+BAD_STARTS = ["이에 ","이를 ","이후 ","이와 ","한편 ","또한 ","그러나 ","하지만 ","따라서 ","이같은 ","이번 ","이런 ","이같이 "]
 
-def to_개조식(line):
-    line = line.strip()
-    # 접속어로 시작하면 스킵 신호
+def to_개조식(text):
+    # 접속어 시작 제거
     for b in BAD_STARTS:
-        if line.startswith(b):
+        if text.startswith(b):
             return None
-    # 서술어 어미 → 명사형으로 변환
-    conversions = {
-        "인하했다": "인하", "인하한다": "인하", "인하됐다": "인하",
-        "허용됐다": "허용", "허용했다": "허용", "도입됐다": "도입",
-        "발표됐다": "발표", "시행됐다": "시행", "논의됐다": "논의",
-    }
-    for k, v in conversions.items():
-        line = line.replace(k, v)
-    for e in STRIP_ENDINGS:
-        if line.endswith(e):
-            line = line[:-len(e)]
+    # 문장 끝 서술형 어미를 명사형으로 변환 (긴 것 먼저)
+    endings = [
+        ("하고 있다",""), ("되고 있다",""), ("병행되고 있다","병행"),
+        ("시행 중이다","시행"), ("논의 중이다","논의"), ("검토 중이다","검토"),
+        ("인하됐으며","인하"), ("인하됐다","인하"), ("인하했다","인하"),
+        ("허용됐다","허용"), ("허용했다","허용"), ("도입됐다","도입"),
+        ("발표됐다","발표"), ("시행됐다","시행"), ("강화됐다","강화"),
+        ("부각됐다","부각"), ("이어지고 있다","이어짐"), ("높아지고 있다","상승"),
+        ("중이다","중"), ("이다",""), ("됐다",""), ("했다",""),
+        ("한다",""), ("된다",""), ("있다",""), ("없다",""),
+        ("밝혔다",""), ("전했다",""), ("나타났다",""), ("보인다",""),
+        ("예정이다","예정"), ("것이다",""), ("했으며",""), ("했고",""),
+    ]
+    for old, new in endings:
+        if text.endswith(old):
+            text = text[:-len(old)] + new
             break
-    # 마침표/물음표 제거
-    line = re.sub(r"[.。?！!]+$", "", line).strip()
-    return line if len(line) > 10 else None
+    text = re.sub(r"[.。?！!,]+$", "", text).strip()
+    return text if len(text) > 10 else None
 
 def to_html(all_articles):
     all_items = []
@@ -106,7 +105,7 @@ def to_html(all_articles):
                     line = line[:cut] + "…" if cut > 25 else line[:50] + "…"
                 priority = sum(1 for pk in POLICY_KEYWORDS if pk in line or pk in title)
                 all_items.append((priority, line))
-                break  # 기사당 1개만
+                break
 
     seen = set()
     summary_html = ""
@@ -118,11 +117,9 @@ def to_html(all_articles):
         summary_html += f'<div style="font-size:15px;line-height:26px;color:#334155;margin-bottom:4px;">• {line}</div>'
         count += 1
 
-    # 키워드별 고정 색상
     palette = ["#4f46e5","#db2777","#d97706","#059669","#2563eb","#dc2626","#7c3aed","#0891b2"]
     kw_colors = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
 
-    # 기사 카드 (위아래 패딩 2/3로 축소: 20px→13px, 내부 24px→16px)
     cards_html = ""
     for kw, articles in all_articles.items():
         color  = kw_colors[kw]
@@ -130,31 +127,31 @@ def to_html(all_articles):
         for a in articles:
             cards_html += f"""
             <tr>
-              <td style="padding:0 36px 11px 36px;">
+              <td style="padding:0 36px 8px 36px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-                       style="border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
+                       style="border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
                   <tr>
-                    <td width="6" style="background-color:{color};">&nbsp;</td>
-                    <td style="padding:14px 20px;">
-                      <div style="margin-bottom:6px;">
+                    <td width="5" style="background-color:{color};">&nbsp;</td>
+                    <td style="padding:11px 18px;">
+                      <div style="margin-bottom:5px;">
                         <span style="display:inline-block;background-color:{tag_bg};color:{color};
-                                     font-size:12px;line-height:18px;font-weight:700;
-                                     padding:3px 10px;border-radius:999px;">{kw}</span>
+                                     font-size:11px;line-height:17px;font-weight:700;
+                                     padding:2px 9px;border-radius:999px;">{kw}</span>
                       </div>
-                      <div style="font-size:18px;line-height:27px;color:#111827;font-weight:800;
+                      <div style="font-size:17px;line-height:25px;color:#111827;font-weight:800;
                                   font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
                         {a['title']}
                       </div>
-                      <div style="padding-top:6px;font-size:14px;line-height:22px;color:#4b5563;">
+                      <div style="padding-top:5px;font-size:13.5px;line-height:21px;color:#4b5563;">
                         {a['summary'] or '원문 링크를 확인해주세요.'}
                       </div>
-                      <div style="padding-top:8px;font-size:13px;line-height:20px;color:#94a3b8;">
+                      <div style="padding-top:6px;font-size:12px;line-height:18px;color:#94a3b8;">
                         {a['date']}{' · ' + a['press'] if a.get('press') else ''}
                       </div>
-                      <div style="padding-top:10px;text-align:right;">
+                      <div style="padding-top:8px;text-align:right;">
                         <a href="{a['link']}" style="display:inline-block;background-color:#111827;
-                           color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;
-                           padding:8px 16px;border-radius:10px;">🔗 기사보기</a>
+                           color:#ffffff;text-decoration:none;font-size:12px;font-weight:700;
+                           padding:6px 13px;border-radius:8px;">🔗 기사보기</a>
                       </div>
                     </td>
                   </tr>
