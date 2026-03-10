@@ -449,17 +449,19 @@ def to_html(all_articles):
 
 # ── 메일 발송 ───────────────────────────────────────────────
 def send_mail(html):
+    recipients = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
+
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[이번주 앱마켓 동향 기사] {today}"
     msg["From"] = f"{GMAIL_ID}@gmail.com"
-    msg["To"] = MAIL_TO
+    msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(html, "html", "utf-8"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
         smtp.login(GMAIL_ID, GMAIL_PW)
-        smtp.send_message(msg)
+        smtp.sendmail(msg["From"], recipients, msg.as_string())
 
-    print(f"✅ 메일 발송 완료 → {MAIL_TO}")
+    print(f"✅ 메일 발송 완료 → {', '.join(recipients)}")
 
 
 # ── 실행 ────────────────────────────────────────────────────
