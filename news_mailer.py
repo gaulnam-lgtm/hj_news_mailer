@@ -27,26 +27,29 @@ def fetch_articles(keyword):
     data = json.loads(resp.read().decode("utf-8"))
 
     articles = []
+    week_ago_dt = datetime.now(timezone.utc) - timedelta(days=7)
+
     for item in data.get("items", []):
         title   = re.sub(r"<[^>]+>", "", item.get("title", "")).strip()
         link    = item.get("originallink") or item.get("link", "")
         desc    = re.sub(r"<[^>]+>", "", item.get("description", "")).strip()
         pub_str = item.get("pubDate", "")
 
-        # 날짜 파싱
+        # 날짜 파싱 + 1주일 이내 필터링
         try:
             from email.utils import parsedate_to_datetime
-            pub_dt = parsedate_to_datetime(pub_str)
+            pub_dt = parsedate_to_datetime(pub_str).astimezone(timezone.utc)
+            if pub_dt < week_ago_dt:
+                continue  # 1주일 이전 기사 제외
             pub_label = pub_dt.strftime("%Y.%m.%d")
         except Exception:
-            pub_label = ""
+            continue
 
-        # 언론사 추출 (link 도메인에서)
+        # 언론사 추출
         press_match = re.search(r"https?://(?:www\.)?([^/]+)", link)
         press = press_match.group(1) if press_match else ""
 
         print(f"  [{keyword}] {title[:40]} | {desc[:40]}")
-
         articles.append({
             "title":   title,
             "press":   press,
@@ -126,8 +129,8 @@ if __name__ == "__main__":
         print(f"  - {kw} 검색 중...")
         all_articles[kw] = fetch_articles(kw)
 
-    # 기사 있는 키워드 먼저
-    all_articles = dict(sorted(all_articles.items(), key=lambda x: 0 if x[1] else 1))
+    # 기사 있는 키워드만 포함, 없는 키워드는 제외
+    all_articles = {kw: arts for kw, arts in all_articles.items() if arts}
 
     html = to_html(all_articles)
     send_mail(html)
