@@ -157,7 +157,7 @@ def to_html(all_articles):
                       <div style="padding-top:8px;text-align:right;">
                         <a href="{a['link']}" style="display:inline-block;background-color:#111827;
                            color:#ffffff;text-decoration:none;font-size:12px;font-weight:700;
-                           padding:6px 13px;border-radius:8px;">🔗 기사보기</a>
+                           padding:6px 13px;border-radius:8px;background-color:#374151;">🔗 기사보기</a>
                       </div>
                     </td>
                   </tr>
