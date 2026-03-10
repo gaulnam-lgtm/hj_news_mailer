@@ -62,47 +62,78 @@ def fetch_articles(keyword):
 
 # ── HTML 변환 ───────────────────────────────────────────────
 def to_html(all_articles):
-    sections = []
+    # 핵심 요약 (키워드별 첫 번째 기사 제목 기반)
+    summary_items = ""
     for kw, articles in all_articles.items():
-        cards = ""
-        if not articles:
-            cards = '<p style="color:#94a3b8;font-size:13px;">최근 1주일 내 관련 기사를 찾지 못했습니다.</p>'
-        else:
-            for a in articles:
-                summary_html = a['summary'] if a['summary'] else '<span style="color:#94a3b8;">원문 링크를 확인해주세요.</span>'
-                cards += f"""
-                <div style="background:#fff;border-left:4px solid #3b82f6;border-radius:10px;
-                            padding:18px 20px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,.07);">
-                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px;">
-                    <strong style="font-size:14px;color:#1e293b;line-height:1.5;">{a['title']}</strong>
-                    <a href="{a['link']}" style="flex-shrink:0;font-size:12px;padding:4px 10px;
-                       background:#eff6ff;color:#2563eb;border-radius:5px;text-decoration:none;
-                       white-space:nowrap;">원문 →</a>
-                  </div>
-                  <p style="font-size:13px;color:#475569;line-height:1.7;margin:0;">{summary_html}</p>
-                  <p style="font-size:11px;color:#94a3b8;margin:6px 0 0;">{a['date']}{' · ' + a['press'] if a.get('press') else ''}</p>
-                </div>"""
+        if articles:
+            summary_items += f'<li style="margin-bottom:8px;color:#374151;">{articles[0]["title"]}</li>'
 
-        sections.append(f"""
-        <div style="margin-bottom:28px;">
-          <h2 style="font-size:15px;color:#1e293b;margin:0 0 12px;padding-bottom:8px;
-                     border-bottom:2px solid #e2e8f0;">🔍 {kw}</h2>
-          {cards}
-        </div>""")
+    # 주요 기사 카드
+    cards_html = ""
+    border_colors = ["#6366f1","#ec4899","#f59e0b","#10b981","#3b82f6","#ef4444","#8b5cf6","#14b8a6"]
+    color_idx = 0
+    for kw, articles in all_articles.items():
+        for a in articles:
+            color = border_colors[color_idx % len(border_colors)]
+            cards_html += f"""
+            <div style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:20px;
+                        box-shadow:0 1px 8px rgba(0,0,0,.07);border-left:5px solid {color};">
+              <span style="display:inline-block;background:{color}18;color:{color};
+                           border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;
+                           margin-bottom:12px;">{kw}</span>
+              <h3 style="margin:0 0 10px;font-size:17px;color:#111827;line-height:1.5;">{a['title']}</h3>
+              <p style="margin:0 0 14px;font-size:13.5px;color:#4b5563;line-height:1.8;">{a['summary'] or '원문 링크를 확인해주세요.'}</p>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:11.5px;color:#9ca3af;">{a['date']}{' · ' + a['press'] if a.get('press') else ''}</span>
+                <a href="{a['link']}" style="display:inline-flex;align-items:center;gap:6px;
+                   background:#f3f4f6;color:#374151;border-radius:8px;padding:7px 16px;
+                   font-size:13px;font-weight:600;text-decoration:none;">🔗 기사보기</a>
+              </div>
+            </div>"""
+            color_idx += 1
 
     return f"""
-    <html><body style="margin:0;padding:0;background:#f5f7fa;font-family:'Malgun Gothic',sans-serif;">
-    <div style="max-width:800px;margin:0 auto;">
-      <div style="background:#1e293b;padding:24px 32px;">
-        <h1 style="color:#fff;margin:0;font-size:22px;">📰 이번주 앱마켓 동향 기사</h1>
-        <p style="color:#94a3b8;margin:6px 0 0;font-size:13px;">
-          검색 범위: <strong style="color:#cbd5e1;">{week_ago} ~ {today}</strong>
+    <html><body style="margin:0;padding:0;background:#f1f5f9;font-family:'Malgun Gothic',sans-serif;">
+    <div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+
+      <!-- 헤더 -->
+      <div style="background:linear-gradient(135deg,#1e293b 0%,#334155 100%);
+                  border-radius:16px;padding:36px 40px;margin-bottom:24px;">
+        <p style="color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:2px;margin:0 0 10px;">
+          WEEKLY MARKET NEWS
+        </p>
+        <h1 style="color:#fff;margin:0 0 10px;font-size:28px;font-weight:800;">
+          📊 이번주 앱마켓 동향 기사
+        </h1>
+        <p style="color:#94a3b8;margin:0;font-size:13px;">
+          검색 범위 : <strong style="color:#cbd5e1;">{week_ago} ~ {today}</strong>
         </p>
       </div>
-      <div style="padding:24px 16px;">
-        {''.join(sections)}
+
+      <!-- 인사말 -->
+      <div style="background:#fff;border-radius:12px;padding:20px 28px;margin-bottom:20px;
+                  box-shadow:0 1px 6px rgba(0,0,0,.06);">
+        <p style="margin:0 0 4px;color:#374151;font-size:14px;">안녕하세요.</p>
+        <p style="margin:0;color:#374151;font-size:14px;">이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.</p>
       </div>
-      <div style="text-align:center;padding:16px;color:#94a3b8;font-size:12px;">
+
+      <!-- 핵심 요약 -->
+      <div style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:28px;
+                  box-shadow:0 1px 6px rgba(0,0,0,.06);">
+        <h2 style="margin:0 0 16px;font-size:16px;color:#1e293b;font-weight:700;">🔍 이번주 핵심 요약</h2>
+        <ul style="margin:0;padding-left:20px;line-height:1.9;">
+          {summary_items}
+        </ul>
+      </div>
+
+      <!-- 주요 기사 -->
+      <h2 style="font-size:18px;color:#1e293b;font-weight:800;margin:0 0 16px;">
+        📰 주요 기사
+      </h2>
+      {cards_html if cards_html else '<p style="color:#94a3b8;">이번 주 관련 기사를 찾지 못했습니다.</p>'}
+
+      <!-- 푸터 -->
+      <div style="text-align:center;padding:20px;color:#9ca3af;font-size:12px;">
         자동 발송 · {today} · 네이버 뉴스
       </div>
     </div>
