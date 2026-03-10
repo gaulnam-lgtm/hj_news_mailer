@@ -38,12 +38,15 @@ KEYWORDS = json.loads(os.environ["KEYWORDS"])
 today    = datetime.now(timezone.utc).strftime("%Y년 %m월 %d일")
 week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
-# ── Google 리다이렉트 URL → 실제 기사 URL 추출 ──────────────
+# ── Google News URL → 실제 기사 URL 추출 ────────────────────
 def resolve_url(url):
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=10, allow_redirects=True)
-        print(f"    resolve: {url[:60]} → {resp.url[:60]}")
-        return resp.url
+        # rss/articles → articles 로 변환 후 리다이렉트 추적
+        real_url = url.replace("news.google.com/rss/articles/", "news.google.com/articles/")
+        resp = requests.get(real_url, headers=HEADERS, timeout=10, allow_redirects=True)
+        final = resp.url
+        print(f"    resolve: {url[:50]} → {final[:70]}")
+        return final
     except Exception as e:
         print(f"    resolve 실패: {e}")
         return url
