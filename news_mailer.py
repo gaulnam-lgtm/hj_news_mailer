@@ -5,8 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from urllib.request import urlopen, Request
 from urllib.parse import quote
-import requests
-from bs4 import BeautifulSoup
+import trafilatura
 
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
@@ -20,34 +19,14 @@ week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 # ── 기사 본문에서 요약 추출 ─────────────────────────────────
 def fetch_summary(url):
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0",
-            "Accept": "text/html,application/xhtml+xml",
-            "Accept-Language": "ko-KR,ko;q=0.9",
-        }
-        resp = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
-        resp.encoding = resp.apparent_encoding
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        # 불필요한 태그 제거
-        for tag in soup(["script", "style", "nav", "header", "footer", "aside", "figure"]):
-            tag.decompose()
-
-        # 본문 영역 우선 탐색
-        body = (
-            soup.find("article") or
-            soup.find(attrs={"class": re.compile(r"article|content|body|news_text|article_body", re.I)}) or
-            soup.find("main") or
-            soup.body
-        )
-
-        if not body:
+        downloaded = trafilatura.fetch_url(url)
+        if not downloaded:
             return ""
-
-        # 문장 추출 (30자 이상)
-        text = body.get_text(separator=" ", strip=True)
-        text = re.sub(r"\s+", " ", text)
-        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if len(s.strip()) > 30]
+        text = trafilatura.extract(downloaded, include_comments=False, include_tables=False)
+        if not text:
+            return ""
+        # 문장 분리 후 앞 3문장
+        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if len(s.strip()) > 20]
         return " ".join(sentences[:3])[:300]
     except Exception:
         return ""
