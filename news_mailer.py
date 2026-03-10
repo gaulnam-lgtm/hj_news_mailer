@@ -7,7 +7,23 @@ from urllib.request import urlopen, Request
 from urllib.parse import quote
 import trafilatura
 import urllib.request
-from newspaper import Article
+import urllib.error
+from html.parser import HTMLParser
+
+# ── og:description 파서 ──────────────────────────────────────
+class MetaParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.description = ""
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "meta":
+            d = dict(attrs)
+            if d.get("property") in ("og:description", "twitter:description") \
+               or d.get("name") in ("description", "og:description"):
+                val = d.get("content", "").strip()
+                if val and len(val) > self.description.__len__():
+                    self.description = val
 
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
@@ -29,15 +45,27 @@ def resolve_url(url):
 
 # ── 기사 본문에서 요약 추출 ─────────────────────────────────
 def fetch_summary(url):
-    # 방법 1: newspaper3k
+    # 방법 1: og:description 메타태그
     try:
         real_url = resolve_url(url)
-        article = Article(real_url, language="ko")
-        article.download()
-        article.parse()
-        article.nlp()
-        if article.summary and len(article.summary) > 20:
-            return article.summary[:300]
+        req = urllib.request.Request(real_url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Accept-Language": "ko-KR,ko;q=0.9",
+        })
+        raw = urllib.request.urlopen(req, timeout=10).read(30000)
+        for enc in ("utf-8", "euc-kr", "cp949"):
+            try:
+                html = raw.decode(enc)
+                break
+            except Exception:
+                continue
+        else:
+            html = raw.decode("utf-8", errors="ignore")
+
+        parser = MetaParser()
+        parser.feed(html[:10000])  # head 부분만 파싱
+        if parser.description and len(parser.description) > 20:
+            return parser.description[:300]
     except Exception:
         pass
 
