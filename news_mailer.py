@@ -1,4 +1,4 @@
-import os, json, smtplib
+import os, json, smtplib, re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
@@ -15,6 +15,24 @@ KEYWORDS = json.loads(os.environ["KEYWORDS"])
 today    = datetime.now(timezone.utc).strftime("%Y년 %m월 %d일")
 week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
+# ── 기사 본문에서 요약 추출 ─────────────────────────────────
+def fetch_summary(url):
+    try:
+        req = Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        })
+        html = urlopen(req, timeout=10).read().decode("utf-8", errors="ignore")
+        # 태그 제거
+        text = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", html, flags=re.DOTALL)
+        text = re.sub(r"<[^>]+>", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        # 의미있는 문장만 추출 (20자 이상)
+        sentences = [s.strip() for s in re.split(r"[.!?。]", text) if len(s.strip()) > 20]
+        summary = ". ".join(sentences[2:5])  # 앞 2개는 메뉴 등 노이즈 많아 건너뜀
+        return summary[:200] if summary else ""
+    except Exception:
+        return ""
+
 # ── Google News RSS 서치 ────────────────────────────────────
 def fetch_articles(keyword):
     url = f"https://news.google.com/rss/search?q={quote(keyword)}&hl=ko&gl=KR&ceid=KR:ko"
@@ -22,16 +40,20 @@ def fetch_articles(keyword):
     xml = urlopen(req, timeout=15).read()
     root = ET.fromstring(xml)
 
+    from email.utils import parsedate_to_datetime
     articles = []
     for item in root.findall(".//item"):
         title   = item.findtext("title", "").strip()
         link    = item.findtext("link", "").strip()
         pub_str = item.findtext("pubDate", "")
-        desc    = item.findtext("description", "").strip()
+
+        # 제목에서 언론사 분리 (예: "제목 - 한스경제" → 제목 / 언론사 따로)
+        press_match = re.search(r"\s+-\s+([^-]+)$", title)
+        press = press_match.group(1).strip() if press_match else ""
+        title = re.sub(r"\s+-\s+[^-]+$", "", title).strip()
 
         # 날짜 파싱
         try:
-            from email.utils import parsedate_to_datetime
             pub_dt = parsedate_to_datetime(pub_str).astimezone(timezone.utc)
         except Exception:
             continue
@@ -40,19 +62,23 @@ def fetch_articles(keyword):
         if pub_dt < week_ago:
             continue
 
-        # 태그 제거
-        import re
-        desc = re.sub(r"<[^>]+>", "", desc).strip()
         pub_label = pub_dt.strftime("%Y.%m.%d")
+
+        # 본문 요약 가져오기
+        summary = fetch_summary(link)
 
         articles.append({
             "title":   title,
+            "press":   press,
             "link":    link,
-            "summary": desc[:200] if desc else "",
+            "summary": summary,
             "date":    pub_label,
         })
 
-    return articles[:3]  # 키워드당 최대 3개
+        if len(articles) >= 3:
+            break
+
+    return articles
 
 # ── HTML 변환 ───────────────────────────────────────────────
 def to_html(all_articles):
@@ -79,7 +105,7 @@ def to_html(all_articles):
                        white-space:nowrap;">원문 →</a>
                   </div>
                   <p style="font-size:13px;color:#475569;line-height:1.7;margin:0;">{a['summary']}</p>
-                  <p style="font-size:11px;color:#94a3b8;margin:6px 0 0;">{a['date']}</p>
+                  <p style="font-size:11px;color:#94a3b8;margin:6px 0 0;">{a['date']}{' · ' + a['press'] if a.get('press') else ''}</p>
                 </div>"""
 
         sections.append(f"""
