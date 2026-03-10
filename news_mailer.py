@@ -45,7 +45,13 @@ def fetch_articles(keyword):
         except Exception:
             continue
 
-        # 언론사 추출
+        # 관련도 체크: 제목 또는 요약에 키워드(띄어쓰기 무시) 포함 여부
+        kw_clean = re.sub(r"\s+", "", keyword)
+        title_clean = re.sub(r"\s+", "", title)
+        desc_clean  = re.sub(r"\s+", "", desc)
+        if kw_clean not in title_clean and kw_clean not in desc_clean:
+            continue
+
         press_match = re.search(r"https?://(?:www\.)?([^/]+)", link)
         press = press_match.group(1) if press_match else ""
 
