@@ -18,6 +18,9 @@ KEYWORDS = json.loads(os.environ["KEYWORDS"])
 NAVER_CLIENT_ID = os.environ["NAVER_CLIENT_ID"]
 NAVER_CLIENT_SECRET = os.environ["NAVER_CLIENT_SECRET"]
 
+# 기사 점수 하한선: 이 점수 미만은 제외
+MIN_ARTICLE_SCORE = int(os.environ.get("MIN_ARTICLE_SCORE", "9"))
+
 # 선택 시크릿: 없으면 기본값 사용
 KEYWORDS_PLATFORM = json.loads(
     os.environ.get(
@@ -218,11 +221,14 @@ def fetch_articles(keyword):
             "keyword": keyword,
         })
 
-    # 점수순 정렬 → 중복 제거 → 상위 3개
-    articles.sort(key=lambda x: (-x["score"], x["date"]), reverse=False)
-    articles = dedupe_articles(articles)
+    # 점수순 정렬 → 중복 제거
     articles.sort(key=lambda x: x["score"], reverse=True)
+    articles = dedupe_articles(articles)
 
+    # 점수 기준 미달 기사 제거
+    articles = [a for a in articles if a["score"] >= MIN_ARTICLE_SCORE]
+
+    # 키워드별 최대 3개만 반환
     return articles[:3]
 
 
@@ -376,7 +382,6 @@ def to_html(all_articles):
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
                    style="max-width:1000px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
 
-              <!-- 헤더 -->
               <tr>
                 <td style="background:linear-gradient(to right,#0f1f3d 0%,#1a3a6b 50%,#1e4d9b 100%);
                            padding:28px 36px;">
@@ -393,7 +398,6 @@ def to_html(all_articles):
                 </td>
               </tr>
 
-              <!-- 인트로 -->
               <tr>
                 <td style="padding:24px 36px 8px 36px;font-size:15px;line-height:24px;color:#475569;">
                   안녕하세요.<br>
@@ -401,7 +405,6 @@ def to_html(all_articles):
                 </td>
               </tr>
 
-              <!-- 핵심 요약 -->
               <tr>
                 <td style="padding:16px 36px 8px 36px;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
@@ -418,7 +421,6 @@ def to_html(all_articles):
                 </td>
               </tr>
 
-              <!-- 주요기사 타이틀 -->
               <tr>
                 <td style="padding:24px 36px 12px 36px;">
                   <div style="font-size:22px;line-height:30px;font-weight:800;color:#0f172a;">
@@ -427,14 +429,12 @@ def to_html(all_articles):
                 </td>
               </tr>
 
-              <!-- 기사 카드들 -->
               {cards_html if total_count > 0 else empty_html}
 
-              <!-- 푸터 -->
               <tr>
                 <td style="border-top:1px solid #e5e7eb;padding:20px 36px 28px 36px;
                            font-size:13px;line-height:22px;color:#94a3b8;">
-                  Weekly App Market Monitoring · {today} · 
+                  자동 발송 · {today}
                 </td>
               </tr>
 
@@ -474,9 +474,13 @@ if __name__ == "__main__":
     for kw in KEYWORDS:
         print(f"  - {kw} 검색 중...")
         articles = fetch_articles(kw)
+
+        # 기사 있는 키워드만 포함
         if articles:
             all_articles[kw] = articles
             total_found += len(articles)
+        else:
+            print(f"    → 제외됨: {kw} (기사 없음 또는 정확도 부족)")
 
     html = to_html(all_articles)
     send_mail(html)
