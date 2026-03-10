@@ -1,4 +1,4 @@
-import os, json, smtplib, re
+import os, json, smtplib, re, base64
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
@@ -38,18 +38,23 @@ KEYWORDS = json.loads(os.environ["KEYWORDS"])
 today    = datetime.now(timezone.utc).strftime("%Y년 %m월 %d일")
 week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
-# ── Google News URL → 실제 기사 URL 추출 ────────────────────
+# ── Google News URL → 실제 기사 URL 디코딩 ──────────────────
 def resolve_url(url):
     try:
-        # rss/articles → articles 로 변환 후 리다이렉트 추적
-        real_url = url.replace("news.google.com/rss/articles/", "news.google.com/articles/")
-        resp = requests.get(real_url, headers=HEADERS, timeout=10, allow_redirects=True)
-        final = resp.url
-        print(f"    resolve: {url[:50]} → {final[:70]}")
-        return final
+        # 기사 ID 추출 (CBMi... 부분)
+        article_id = url.split("/articles/")[-1].split("?")[0]
+        # base64 디코딩으로 실제 URL 추출
+        padding = (4 - len(article_id) % 4) % 4
+        decoded = base64.urlsafe_b64decode(article_id + "=" * padding)
+        # 디코딩된 바이트에서 http URL 찾기
+        matches = re.findall(rb'https?://[^\x00-\x1f\x7f-\xff\s]{10,}', decoded)
+        if matches:
+            real_url = matches[0].decode("utf-8").rstrip(".,)")
+            print(f"    decoded: {real_url[:80]}")
+            return real_url
     except Exception as e:
-        print(f"    resolve 실패: {e}")
-        return url
+        print(f"    decode 실패: {e}")
+    return url
 
 # ── 기사 본문에서 요약 추출 ─────────────────────────────────
 def fetch_summary(url):
