@@ -1,4 +1,4 @@
-name: 앱마켓 관련 동향 기사
+name: 뉴스 서치 메일 발송
 
 on:
   repository_dispatch:
