@@ -38,8 +38,16 @@ def fetch_articles(keyword):
         except Exception:
             pub_label = ""
 
-        # desc가 제목 반복이면 제거
-        summary = "" if desc.strip() == title.strip() else desc[:300]
+        # 실제 기사 본문 요약 가져오기
+        summary = ""
+        try:
+            full = gn.get_full_article(r.get("url", ""))
+            if full and full.text:
+                sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", full.text) if len(s.strip()) > 20]
+                summary = " ".join(sentences[:3])[:300]
+        except Exception as e:
+            print(f"    본문 가져오기 실패: {e}")
+
         print(f"    [{keyword}] {title[:40]} | {summary[:40] if summary else '요약없음'}")
 
         articles.append({
