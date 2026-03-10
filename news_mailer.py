@@ -62,24 +62,51 @@ def fetch_articles(keyword):
 
 # ── HTML 변환 ───────────────────────────────────────────────
 POLICY_KEYWORDS = ["수수료", "정책", "규제", "법", "인하", "허용", "금지", "의무", "심사", "결제"]
+# 개조식 변환: 서술어 어미 제거
+STRIP_ENDINGS = ["이다", "했다", "한다", "된다", "있다", "없다", "밝혔다", "전했다", "나타났다",
+                 "보인다", "예정이다", "중이다", "것이다", "하고 있다", "했으며", "했고"]
+# 제거할 접속어/부사 시작 패턴
+BAD_STARTS = ["이에 ", "이를 ", "이후 ", "이와 ", "한편 ", "또한 ", "그러나 ", "하지만 ", "따라서 ", "이같은 "]
+
+def to_개조식(line):
+    line = line.strip()
+    # 접속어로 시작하면 스킵 신호
+    for b in BAD_STARTS:
+        if line.startswith(b):
+            return None
+    # 서술어 어미 → 명사형으로 변환
+    conversions = {
+        "인하했다": "인하", "인하한다": "인하", "인하됐다": "인하",
+        "허용됐다": "허용", "허용했다": "허용", "도입됐다": "도입",
+        "발표됐다": "발표", "시행됐다": "시행", "논의됐다": "논의",
+    }
+    for k, v in conversions.items():
+        line = line.replace(k, v)
+    for e in STRIP_ENDINGS:
+        if line.endswith(e):
+            line = line[:-len(e)]
+            break
+    # 마침표/물음표 제거
+    line = re.sub(r"[.。?！!]+$", "", line).strip()
+    return line if len(line) > 10 else None
 
 def to_html(all_articles):
-    # 핵심 요약 — 정책/수수료 우선, 최대 3개, 개조식 (완전한 문장으로 끊기)
     all_items = []
     for kw, articles in all_articles.items():
         for a in articles:
             title = a.get("title", "")
             src   = a.get("summary") or title
-            # 완전한 문장 단위로 분리
             sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", src.strip()) if len(s.strip()) > 15]
-            line  = sents[0] if sents else title
-            line  = re.sub(r"[.。]+$", "", line).strip()
-            # 너무 길면 자연스러운 끊김 위치에서 자르기
-            if len(line) > 55:
-                cut = line[:55].rfind(" ")
-                line = line[:cut] + "…" if cut > 30 else line[:55] + "…"
-            priority = sum(1 for pk in POLICY_KEYWORDS if pk in line or pk in title)
-            all_items.append((priority, line))
+            for sent in sents:
+                line = to_개조식(sent)
+                if not line:
+                    continue
+                if len(line) > 50:
+                    cut = line[:50].rfind(" ")
+                    line = line[:cut] + "…" if cut > 25 else line[:50] + "…"
+                priority = sum(1 for pk in POLICY_KEYWORDS if pk in line or pk in title)
+                all_items.append((priority, line))
+                break  # 기사당 1개만
 
     seen = set()
     summary_html = ""
@@ -95,39 +122,39 @@ def to_html(all_articles):
     palette = ["#4f46e5","#db2777","#d97706","#059669","#2563eb","#dc2626","#7c3aed","#0891b2"]
     kw_colors = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
 
-    # 기사 카드
+    # 기사 카드 (위아래 패딩 2/3로 축소: 20px→13px, 내부 24px→16px)
     cards_html = ""
     for kw, articles in all_articles.items():
-        color   = kw_colors[kw]
-        tag_bg  = color + "18"
+        color  = kw_colors[kw]
+        tag_bg = color + "18"
         for a in articles:
             cards_html += f"""
             <tr>
-              <td style="padding:0 36px 16px 36px;">
+              <td style="padding:0 36px 11px 36px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
                        style="border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
                   <tr>
                     <td width="6" style="background-color:{color};">&nbsp;</td>
-                    <td style="padding:20px 24px;">
-                      <div style="margin-bottom:8px;">
+                    <td style="padding:14px 20px;">
+                      <div style="margin-bottom:6px;">
                         <span style="display:inline-block;background-color:{tag_bg};color:{color};
                                      font-size:12px;line-height:18px;font-weight:700;
-                                     padding:4px 10px;border-radius:999px;">{kw}</span>
+                                     padding:3px 10px;border-radius:999px;">{kw}</span>
                       </div>
-                      <div style="font-size:18px;line-height:28px;color:#111827;font-weight:800;
+                      <div style="font-size:18px;line-height:27px;color:#111827;font-weight:800;
                                   font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
                         {a['title']}
                       </div>
-                      <div style="padding-top:8px;font-size:14px;line-height:23px;color:#4b5563;">
+                      <div style="padding-top:6px;font-size:14px;line-height:22px;color:#4b5563;">
                         {a['summary'] or '원문 링크를 확인해주세요.'}
                       </div>
-                      <div style="padding-top:12px;font-size:13px;line-height:20px;color:#94a3b8;">
+                      <div style="padding-top:8px;font-size:13px;line-height:20px;color:#94a3b8;">
                         {a['date']}{' · ' + a['press'] if a.get('press') else ''}
                       </div>
-                      <div style="padding-top:14px;text-align:right;">
+                      <div style="padding-top:10px;text-align:right;">
                         <a href="{a['link']}" style="display:inline-block;background-color:#111827;
                            color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;
-                           padding:10px 16px;border-radius:10px;">🔗 기사보기</a>
+                           padding:8px 16px;border-radius:10px;">🔗 기사보기</a>
                       </div>
                     </td>
                   </tr>
