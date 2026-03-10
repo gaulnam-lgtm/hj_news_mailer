@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 from urllib.request import urlopen, Request
 from urllib.parse import quote
 import trafilatura
+import urllib.request
 
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
@@ -16,16 +17,25 @@ KEYWORDS = json.loads(os.environ["KEYWORDS"])
 today    = datetime.now(timezone.utc).strftime("%Y년 %m월 %d일")
 week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
+# ── Google 리다이렉트 URL → 실제 기사 URL 추출 ──────────────
+def resolve_url(url):
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        resp = urllib.request.urlopen(req, timeout=10)
+        return resp.geturl()
+    except Exception:
+        return url
+
 # ── 기사 본문에서 요약 추출 ─────────────────────────────────
 def fetch_summary(url):
     try:
-        downloaded = trafilatura.fetch_url(url)
+        real_url = resolve_url(url)
+        downloaded = trafilatura.fetch_url(real_url)
         if not downloaded:
             return ""
         text = trafilatura.extract(downloaded, include_comments=False, include_tables=False)
         if not text:
             return ""
-        # 문장 분리 후 앞 3문장
         sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if len(s.strip()) > 20]
         return " ".join(sentences[:3])[:300]
     except Exception:
