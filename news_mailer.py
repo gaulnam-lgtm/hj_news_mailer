@@ -18,18 +18,49 @@ week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 # ── 기사 본문에서 요약 추출 ─────────────────────────────────
 def fetch_summary(url):
     try:
-        req = Request(url, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        import urllib.request
+        # 리다이렉트 따라가기
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0",
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "ko-KR,ko;q=0.9",
         })
-        html = urlopen(req, timeout=10).read().decode("utf-8", errors="ignore")
-        # 태그 제거
-        text = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", html, flags=re.DOTALL)
-        text = re.sub(r"<[^>]+>", " ", text)
-        text = re.sub(r"\s+", " ", text).strip()
-        # 의미있는 문장만 추출 (20자 이상)
-        sentences = [s.strip() for s in re.split(r"[.!?。]", text) if len(s.strip()) > 20]
-        summary = ". ".join(sentences[2:5])  # 앞 2개는 메뉴 등 노이즈 많아 건너뜀
-        return summary[:200] if summary else ""
+        resp = urllib.request.urlopen(req, timeout=10)
+        raw = resp.read()
+
+        # 인코딩 감지
+        for enc in ("utf-8", "euc-kr", "cp949"):
+            try:
+                html = raw.decode(enc)
+                break
+            except Exception:
+                continue
+        else:
+            html = raw.decode("utf-8", errors="ignore")
+
+        # 본문 영역 우선 추출 (article, main, .content 등)
+        body = ""
+        for pattern in [
+            r"<article[^>]*>(.*?)</article>",
+            r"<main[^>]*>(.*?)</main>",
+            r'<div[^>]+class="[^"]*(?:article|content|body|text)[^"]*"[^>]*>(.*?)</div>',
+        ]:
+            m = re.search(pattern, html, re.DOTALL | re.IGNORECASE)
+            if m:
+                body = m.group(1)
+                break
+        if not body:
+            body = html
+
+        # 스크립트/스타일 제거 후 텍스트 추출
+        body = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", body, flags=re.DOTALL)
+        body = re.sub(r"<[^>]+>", " ", body)
+        body = re.sub(r"\s+", " ", body).strip()
+
+        # 30자 이상 문장만 필터링
+        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", body) if len(s.strip()) > 30]
+        summary = " ".join(sentences[:3])
+        return summary[:300] if summary else ""
     except Exception:
         return ""
 
@@ -104,7 +135,7 @@ def to_html(all_articles):
                        background:#eff6ff;color:#2563eb;border-radius:5px;text-decoration:none;
                        white-space:nowrap;">원문 →</a>
                   </div>
-                  <p style="font-size:13px;color:#475569;line-height:1.7;margin:0;">{a['summary']}</p>
+                  <p style="font-size:13px;color:#475569;line-height:1.7;margin:0;">{a['summary'] if a['summary'] else '요약을 가져올 수 없습니다. 원문 링크를 확인해주세요.'}</p>
                   <p style="font-size:11px;color:#94a3b8;margin:6px 0 0;">{a['date']}{' · ' + a['press'] if a.get('press') else ''}</p>
                 </div>"""
 
