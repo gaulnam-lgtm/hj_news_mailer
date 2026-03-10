@@ -2,62 +2,60 @@ import os, json, smtplib, re
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from gnews import GNews
+from urllib.request import Request, urlopen
+from urllib.parse import quote
 
 # ── 설정 ────────────────────────────────────────────────────
-GMAIL_ID = os.environ["GMAIL_ID"]
-GMAIL_PW = os.environ["GMAIL_APP_PASSWORD"]
-MAIL_TO  = os.environ["MAIL_TO"]
-KEYWORDS = json.loads(os.environ["KEYWORDS"])
+GMAIL_ID          = os.environ["GMAIL_ID"]
+GMAIL_PW          = os.environ["GMAIL_APP_PASSWORD"]
+MAIL_TO           = os.environ["MAIL_TO"]
+KEYWORDS          = json.loads(os.environ["KEYWORDS"])
+NAVER_CLIENT_ID   = os.environ["NAVER_CLIENT_ID"]
+NAVER_CLIENT_SECRET = os.environ["NAVER_CLIENT_SECRET"]
 
 today    = datetime.now(timezone.utc).strftime("%Y년 %m월 %d일")
 week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y년 %m월 %d일")
 
-# ── Google News 서치 ────────────────────────────────────────
+# ── 네이버 뉴스 검색 ────────────────────────────────────────
 def fetch_articles(keyword):
-    gn = GNews(language="ko", country="KR", period="7d", max_results=5)
-    results = gn.get_news(keyword)
+    url = f"https://openapi.naver.com/v1/search/news.json?query={quote(keyword)}&display=5&sort=date"
+    req = Request(url)
+    req.add_header("X-Naver-Client-Id", NAVER_CLIENT_ID)
+    req.add_header("X-Naver-Client-Secret", NAVER_CLIENT_SECRET)
+
+    resp = urlopen(req, timeout=10)
+    data = json.loads(resp.read().decode("utf-8"))
+
     articles = []
-    for r in results[:3]:
-        title   = r.get("title", "").strip()
-        url     = r.get("url", "").strip()
-        desc    = r.get("description", "").strip()
-        pub     = r.get("published date", "")
-        publisher = r.get("publisher", {}).get("title", "")
+    for item in data.get("items", []):
+        title   = re.sub(r"<[^>]+>", "", item.get("title", "")).strip()
+        link    = item.get("originallink") or item.get("link", "")
+        desc    = re.sub(r"<[^>]+>", "", item.get("description", "")).strip()
+        pub_str = item.get("pubDate", "")
 
-        # 제목에서 언론사 분리
-        press_match = re.search(r"\s+-\s+([^-]+)$", title)
-        press = press_match.group(1).strip() if press_match else publisher
-        title = re.sub(r"\s+-\s+[^-]+$", "", title).strip()
-
-        # 날짜 포맷
+        # 날짜 파싱
         try:
             from email.utils import parsedate_to_datetime
-            pub_dt = parsedate_to_datetime(pub)
+            pub_dt = parsedate_to_datetime(pub_str)
             pub_label = pub_dt.strftime("%Y.%m.%d")
         except Exception:
             pub_label = ""
 
-        # 실제 기사 본문 요약 가져오기
-        summary = ""
-        try:
-            full = gn.get_full_article(r.get("url", ""))
-            if full and full.text:
-                sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", full.text) if len(s.strip()) > 20]
-                summary = " ".join(sentences[:3])[:300]
-        except Exception as e:
-            print(f"    본문 가져오기 실패: {e}")
+        # 언론사 추출 (link 도메인에서)
+        press_match = re.search(r"https?://(?:www\.)?([^/]+)", link)
+        press = press_match.group(1) if press_match else ""
 
-        print(f"    [{keyword}] {title[:40]} | {summary[:40] if summary else '요약없음'}")
+        print(f"  [{keyword}] {title[:40]} | {desc[:40]}")
 
         articles.append({
             "title":   title,
             "press":   press,
-            "link":    url,
-            "summary": summary,
+            "link":    link,
+            "summary": desc,
             "date":    pub_label,
         })
-    return articles
+
+    return articles[:3]
 
 # ── HTML 변환 ───────────────────────────────────────────────
 def to_html(all_articles):
@@ -102,7 +100,7 @@ def to_html(all_articles):
         {''.join(sections)}
       </div>
       <div style="text-align:center;padding:16px;color:#94a3b8;font-size:12px;">
-        자동 발송 · {today} · Google News
+        자동 발송 · {today} · 네이버 뉴스
       </div>
     </div>
     </body></html>"""
@@ -122,7 +120,7 @@ def send_mail(html):
 
 # ── 실행 ────────────────────────────────────────────────────
 if __name__ == "__main__":
-    print("🔍 Google News 탐색 중...")
+    print("🔍 네이버 뉴스 탐색 중...")
     all_articles = {}
     for kw in KEYWORDS:
         print(f"  - {kw} 검색 중...")
