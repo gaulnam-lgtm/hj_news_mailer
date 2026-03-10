@@ -18,7 +18,7 @@ jobs:
           python-version: '3.11'
 
       - name: 라이브러리 설치
-        run: pip install gnews==0.3.7
+        run: pip install gnews==0.3.7 newspaper3k lxml_html_clean
 
       - name: 뉴스 서치 및 메일 발송
         env:
