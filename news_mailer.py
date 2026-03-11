@@ -227,9 +227,23 @@ def get_article_info(url: str, depth=0) -> tuple:
         if "news.google.com" in current_url:
             return None, None
 
-        # Google News 기본 설명 문구 필터링
-        if snippet and "google news" in snippet.lower():
-            snippet = None
+        # Google News 기본 설명 문구 or 사이트 슬로건(너무 짧은 경우) 필터링
+        if snippet:
+            if "google news" in snippet.lower() or len(snippet) < 30:
+                snippet = None
+
+        # 이미지 URL 유효성 검증: HEAD 요청으로 실제 이미지인지 확인
+        if image:
+            try:
+                img_req = Request(image, method="HEAD")
+                img_req.add_header("User-Agent", USER_AGENT)
+                img_req.add_header("Referer", f"{urlparse(image).scheme}://{urlparse(image).netloc}/")
+                with urlopen(img_req, timeout=5) as img_resp:
+                    content_type = img_resp.headers.get("Content-Type", "")
+                    if "image" not in content_type:
+                        image = None
+            except Exception:
+                image = None
 
         return image, snippet
 
