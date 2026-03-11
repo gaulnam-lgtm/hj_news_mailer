@@ -137,6 +137,9 @@ PRESS_MAP = {
     "gamefocus.co.kr": "게임포커스",
     "gameple.co.kr": "게임플",
     "gametoc.hankyung.com": "게임톡",
+    "etoday.co.kr": "이투데이",
+    "news.mtn.co.kr": "MTN뉴스",
+    "sentv.co.kr": "서울경제TV",
 
     # 방송사
     "kbs.co.kr": "KBS",
@@ -260,46 +263,50 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
     base_path = parsed.path.rsplit("/", 1)[0] + "/"
     return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
 
-def get_article_image(url: str) -> str | None:
-    if not url or not url.startswith("http"):
+def get_article_image(url: str, depth=0) -> str | None:
+    # 무한 루프 방지를 위해 depth 체크 (리다이렉트는 1번만 허용)
+    if not url or not url.startswith("http") or depth > 1:
         return None
     try:
         req = Request(url)
-        req.add_header("User-Agent", USER_AGENT)
-        req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-        req.add_header("Accept-Language", "ko-KR,ko;q=0.9,en;q=0.8")
+        # 봇 차단을 우회하기 위해 브라우저와 최대한 유사한 헤더 세팅
+        req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+        req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+        req.add_header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
+        req.add_header("Referer", "https://www.google.com/")
 
-        with urlopen(req, timeout=12) as resp:   # 타임아웃도 조금 늘림
+        with urlopen(req, timeout=10) as resp:
             if resp.getcode() != 200:
                 return None
             html = resp.read().decode("utf-8", errors="ignore")
 
+        # [핵심] 구글 뉴스 RSS의 리다이렉트 중간 페이지 우회 처리
+        if "news.google.com" in url or "news.url.google.com" in url:
+            m = re.search(r'data-n-au=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
+            if not m:
+                m = re.search(r'<a\s+[^>]*href=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
+            if m:
+                real_url = m.group(1)
+                return get_article_image(real_url, depth=depth+1) # 실제 기사 URL로 재요청
+
         # ==================== 개선된 메타 추출 ====================
         def extract_meta(html, meta_name):
-            # 1. property/name 먼저 나오는 경우
             pat1 = rf'<meta\s+[^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\'][^>]*?content\s*=\s*["\']([^"\']+)["\']'
             m = re.search(pat1, html, re.IGNORECASE)
-            if m:
-                return m.group(1).strip()
-            # 2. content 먼저 나오는 경우 (대다수 한국 언론사)
+            if m: return m.group(1).strip()
+            
             pat2 = rf'<meta\s+[^>]*?content\s*=\s*["\']([^"\']+)["\'][^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\']'
             m = re.search(pat2, html, re.IGNORECASE)
-            if m:
-                return m.group(1).strip()
+            if m: return m.group(1).strip()
             return None
 
-        # og:image 우선
+        # og:image, twitter:image 등 순차 탐색
         img = extract_meta(html, "og:image")
-        if img:
-            return make_absolute_url(url, img)
+        if not img:
+            img = extract_meta(html, "twitter:image")
+        if not img:
+            img = extract_meta(html, "twitter:image:src")
 
-        # twitter:image
-        img = extract_meta(html, "twitter:image")
-        if img:
-            return make_absolute_url(url, img)
-
-        # twitter:image:src (일부 사이트)
-        img = extract_meta(html, "twitter:image:src")
         if img:
             return make_absolute_url(url, img)
 
@@ -586,7 +593,7 @@ def to_html(all_articles):
     palette = ["#4f46e5", "#db2777", "#d97706", "#059669", "#2563eb", "#dc2626", "#7c3aed", "#0891b2"]
     kw_colors = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
 
-    cards_html = ""
+cards_html = ""
     total_count = 0
     for kw, articles in all_articles.items():
         color = kw_colors[kw]
@@ -594,15 +601,21 @@ def to_html(all_articles):
         for a in articles:
             total_count += 1
             img_url = a.get("image") or ""
-            image_html = f'''
-              <img src="{img_url}" width="120" height="90"
-                   style="width:120px;height:90px;object-fit:cover;border-radius:10px;display:block;" alt="기사 이미지">
-            ''' if img_url else '''
-              <div style="width:120px;height:90px;background-color:#e2e8f0;border-radius:10px;
-                          display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:28px;">
-                📰
-              </div>
-            '''
+            
+            if img_url:
+                # [핵심] 언론사 이미지 엑스박스(차단) 방지를 위한 무료 이미지 프록시(wsrv.nl) 경유
+                proxy_url = f"https://wsrv.nl/?url={quote(img_url)}&w=240&h=180&fit=cover"
+                image_html = f'''
+                  <img src="{proxy_url}" width="120" height="90"
+                       style="width:120px;height:90px;object-fit:cover;border-radius:10px;display:block;" alt="기사 이미지">
+                '''
+            else:
+                image_html = '''
+                  <div style="width:120px;height:90px;background-color:#e2e8f0;border-radius:10px;
+                              display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:28px;">
+                    📰
+                  </div>
+                '''
 
             cards_html += f"""
             <tr>
@@ -659,7 +672,7 @@ def to_html(all_articles):
             <tr><td style="padding:16px 36px 8px 36px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#e8f4fd;border-radius:16px;">
                 <tr><td style="padding:20px 24px;">
-                  <div style="font-size:17px;line-height:26px;font-weight:800;color:#0f172a;margin-bottom:12px;">🔎 이번주 핵심 요약</div>
+                  <div style="font-size:17px;line-height:26px;font-weight:800;color:#0f172a;margin-bottom:12px;">🔎 핵심 요약</div>
                   {summary_html}
                 </td></tr>
               </table>
