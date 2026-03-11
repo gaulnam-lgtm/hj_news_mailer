@@ -169,6 +169,20 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
 
 
+# ── 봇 차단 도메인 (수집 단계에서 제외) ──────────────────────
+BOT_BLOCKED_DOMAINS = {
+    "v.daum.net",       # Kakao - 강력한 봇 차단
+    "daum.net",
+    "news.nate.com",    # Nate - 봇 차단
+    "nate.com",
+    "naver.com",        # 네이버 뉴스 자체 도메인 (API 외 직접 크롤링 불가)
+}
+
+def is_blocked_domain(url: str) -> bool:
+    domain = get_domain(url)
+    return any(domain == d or domain.endswith("." + d) for d in BOT_BLOCKED_DOMAINS)
+
+
 # ── snippet 품질 검증 ─────────────────────────────────────────
 def is_valid_snippet(text: str) -> bool:
     if not text or len(text) < 30:
@@ -357,12 +371,8 @@ def fetch_naver_articles(keyword):
         except:
             continue
 
-        if not title or not is_relevant_article(keyword, title, desc):
+        if not title or is_blocked_domain(link) or not is_relevant_article(keyword, title, desc):
             continue
-
-        press = get_press_name(link, title)
-        score = score_article(keyword, title, desc)
-        print(f"  [NAVER/{keyword}] ({score}) {title[:50]}...")
 
         image, snippet = get_article_info(link)
 
@@ -426,7 +436,7 @@ def fetch_google_articles(keyword):
             except:
                 continue
 
-            if not title or not is_relevant_article(keyword, title, desc_raw):
+            if not title or is_blocked_domain(real_link or link) or not is_relevant_article(keyword, title, desc_raw):
                 continue
 
             score = score_article(keyword, title, desc_raw)
