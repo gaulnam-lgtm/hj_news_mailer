@@ -593,7 +593,7 @@ def to_html(all_articles):
     palette = ["#4f46e5", "#db2777", "#d97706", "#059669", "#2563eb", "#dc2626", "#7c3aed", "#0891b2"]
     kw_colors = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
 
-cards_html = ""
+    cards_html = ""
     total_count = 0
     for kw, articles in all_articles.items():
         color = kw_colors[kw]
@@ -672,7 +672,7 @@ cards_html = ""
             <tr><td style="padding:16px 36px 8px 36px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#e8f4fd;border-radius:16px;">
                 <tr><td style="padding:20px 24px;">
-                  <div style="font-size:17px;line-height:26px;font-weight:800;color:#0f172a;margin-bottom:12px;">🔎 핵심 요약</div>
+                  <div style="font-size:17px;line-height:26px;font-weight:800;color:#0f172a;margin-bottom:12px;">🔎 이번주 핵심 요약</div>
                   {summary_html}
                 </td></tr>
               </table>
