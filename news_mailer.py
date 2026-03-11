@@ -8,6 +8,7 @@ from email.mime.text import MIMEText
 from email.utils import parsedate_to_datetime
 from urllib.request import Request, urlopen
 from urllib.parse import quote, urlparse
+from collections import defaultdict   # ← 중복 제거용 추가
 
 
 # ── 설정 ────────────────────────────────────────────────────
@@ -82,7 +83,6 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
     parsed = urlparse(base_url)
     if img_url.startswith("/"):
         return f"{parsed.scheme}://{parsed.netloc}{img_url}"
-    # 드물지만 상대경로일 경우
     base_path = parsed.path.rsplit("/", 1)[0] + "/"
     return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
 
@@ -104,7 +104,7 @@ def get_article_image(url: str) -> str | None:
                 return None
             html = resp.read().decode("utf-8", errors="ignore")
 
-        # 1. og:image (대부분의 뉴스사이트가 제공)
+        # 1. og:image
         m = re.search(
             r'<meta\s+(?:property|name)=["\']og:image["\']\s+content=["\']([^"\']+)["\']',
             html,
@@ -113,7 +113,7 @@ def get_article_image(url: str) -> str | None:
         if m:
             return make_absolute_url(url, m.group(1).strip())
 
-        # 2. twitter:image (fallback)
+        # 2. twitter:image
         m = re.search(
             r'<meta\s+(?:name|property)=["\']twitter:image["\']\s+content=["\']([^"\']+)["\']',
             html,
@@ -123,8 +123,7 @@ def get_article_image(url: str) -> str | None:
             return make_absolute_url(url, m.group(1).strip())
 
         return None
-    except Exception as e:
-        print(f"  [IMG] 이미지 추출 실패: {url[:70]}... ({type(e).__name__})")
+    except Exception:
         return None
 
 
@@ -147,7 +146,6 @@ def dedupe_articles(articles):
 
 # ── 검색 쿼리 보정 ──────────────────────────────────────────
 def build_search_query(keyword):
-    # 노이즈가 큰 키워드는 앱마켓 맥락을 강화한 검색어로 보정
     query_map = {
         "아웃링크": "아웃링크 앱스토어 | 아웃링크 인앱결제 | 아웃링크 애플 | 아웃링크 구글",
         "웹결제": "웹결제 앱마켓 | 웹결제 인앱결제 | 웹결제 애플 | 웹결제 구글",
@@ -176,16 +174,13 @@ def is_relevant_article(keyword, title, desc):
     text = normalize_text(raw_text)
     kw = normalize_text(keyword)
 
-    # 1. 기본적으로 키워드는 제목 또는 요약에 포함
     if kw not in text:
         return False
 
-    # 2. 제외 키워드가 있으면 제거
     for bad in KEYWORDS_EXCLUDE:
         if normalize_text(bad) in text:
             return False
 
-    # 3. 노이즈 큰 키워드는 플랫폼/정책 맥락이 함께 있어야 통과
     if any(sk in kw for sk in STRICT_CONTEXT_KEYWORDS):
         has_platform_context = any(normalize_text(p) in text for p in KEYWORDS_PLATFORM)
         has_policy_context = any(normalize_text(p) in text for p in POLICY_HINTS)
@@ -213,7 +208,6 @@ def score_article(keyword, title, desc):
         if normalize_text(p) in text:
             score += 1
 
-    # 제목에 핵심 단어가 직접 있는 경우 가산점
     strong_title_words = [
         "인앱결제", "외부결제", "앱스토어", "플레이스토어", "애플", "구글",
         "수수료", "정책", "규제", "소송", "방통위", "공정위", "안티스티어링",
@@ -270,7 +264,6 @@ def fetch_articles(keyword):
 
         print(f"  [{keyword}] ({score}) {title[:50]} | {desc[:50]}")
 
-        # 대표 이미지 자동 추출 (여기서만 호출 → 불필요한 요청 최소화)
         image = get_article_image(link)
 
         articles.append({
@@ -281,17 +274,13 @@ def fetch_articles(keyword):
             "date": pub_label,
             "score": score,
             "keyword": keyword,
-            "image": image,          # ← 추가
+            "image": image,
         })
 
-    # 점수순 정렬 → 중복 제거
     articles.sort(key=lambda x: x["score"], reverse=True)
     articles = dedupe_articles(articles)
-
-    # 점수 기준 미달 기사 제거
     articles = [a for a in articles if a["score"] >= MIN_ARTICLE_SCORE]
 
-    # 키워드별 최대 3개만 반환
     return articles[:3]
 
 
@@ -397,7 +386,6 @@ def to_html(all_articles):
         for a in articles:
             total_count += 1
 
-            # 이미지 HTML 생성 (없으면 플레이스홀더)
             img_url = a.get("image") or ""
             if img_url:
                 image_html = f'''
@@ -421,15 +409,10 @@ def to_html(all_articles):
                 <div style="border:1.5px solid #e5e7eb;border-radius:14px;overflow:hidden;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                     <tr>
-                      <!-- 기존 세로 컬러바 (위치 그대로 유지) -->
                       <td width="5" style="background-color:{color};">&nbsp;</td>
-                      
-                      <!-- 새로 추가된 대표 이미지 영역 (120×90) -->
                       <td width="130" style="padding:11px 0 11px 12px;background-color:#ffffff;vertical-align:top;">
                         {image_html}
                       </td>
-                      
-                      <!-- 기존 텍스트 영역 (키워드·제목·요약 위치·색상 그대로) -->
                       <td style="padding:11px 18px 11px 8px;background-color:#ffffff;vertical-align:top;">
                         <div style="margin-bottom:5px;">
                           <span style="display:inline-block;background-color:{tag_bg};color:{color};
@@ -565,14 +548,55 @@ if __name__ == "__main__":
         print(f"  - {kw} 검색 중...")
         articles = fetch_articles(kw)
 
-        # 기사 있는 키워드만 포함
         if articles:
             all_articles[kw] = articles
             total_found += len(articles)
         else:
             print(f"    → 제외됨: {kw} (기사 없음 또는 정확도 부족)")
 
+    # ==================== 전역 중복 제거 (링크 기준) ====================
+    print("🔄 전역 중복 제거 중... (링크 동일한 기사는 기사가 적은 키워드에 우선 배정)")
+
+    link_to_entries = defaultdict(list)
+    for kw, arts in all_articles.items():
+        for art in arts:
+            link = art.get("link", "")
+            if link:
+                link_to_entries[link].append((kw, art))
+
+    to_remove = defaultdict(list)   # kw → 제거할 link 리스트
+    for link, entries in link_to_entries.items():
+        if len(entries) <= 1:
+            continue
+
+        # 기사가 적은 키워드 우선 → 같은 개수면 점수 높은 쪽 우선
+        entries.sort(key=lambda x: (len(all_articles[x[0]]), -x[1].get("score", 0)))
+
+        # 첫 번째만 유지, 나머지는 제거 대상
+        for kw, art in entries[1:]:
+            to_remove[kw].append(art["link"])
+
+    # 실제 제거 적용
+    removed_count = 0
+    for kw, remove_links in to_remove.items():
+        if kw not in all_articles:
+            continue
+        original_len = len(all_articles[kw])
+        remove_set = set(remove_links)
+        all_articles[kw] = [a for a in all_articles[kw] if a.get("link") not in remove_set]
+        removed = original_len - len(all_articles[kw])
+        if removed > 0:
+            print(f"  [{kw}] 중복 제거: {removed}건")
+            removed_count += removed
+
+    # 빈 키워드 정리
+    all_articles = {k: v for k, v in all_articles.items() if v}
+
+    total_found = sum(len(arts) for arts in all_articles.values())
+    print(f"✅ 중복 제거 완료 (제거된 기사: {removed_count}건, 최종 기사 수: {total_found}건)")
+    # =================================================================
+
     html = to_html(all_articles)
     send_mail(html)
 
-    print(f"✅ 완료 (수집 기사 수: {total_found})")
+    print(f"✅ 전체 완료 (최종 발송 기사 수: {total_found})")
