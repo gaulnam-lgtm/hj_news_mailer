@@ -223,6 +223,14 @@ def get_article_info(url: str, depth=0) -> tuple:
         )
         snippet = clean_spaces(snippet_raw) if snippet_raw else None
 
+        # 리다이렉트 우회 실패 → 여전히 Google News 페이지에 머물러 있으면 결과 버림
+        if "news.google.com" in current_url:
+            return None, None
+
+        # Google News 기본 설명 문구 필터링
+        if snippet and "google news" in snippet.lower():
+            snippet = None
+
         return image, snippet
 
     except Exception:
@@ -384,6 +392,10 @@ def fetch_google_articles(keyword):
 
             link = link_el.text.strip()
 
+            # <source url="실제기사URL"> 에서 언론사 직접 URL 추출 → 페이지 방문에 사용
+            source_el = item.find("source")
+            real_link = source_el.get("url") if source_el is not None else None
+
             # Google RSS desc는 보통 "제목 언론사명" 반복 → 그대로 두고 아래에서 snippet으로 대체
             desc_raw = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
             pub_str  = pub_el.text if pub_el is not None else ""
@@ -402,8 +414,8 @@ def fetch_google_articles(keyword):
             score = score_article(keyword, title, desc_raw)
             print(f"  [GOOGLE/{keyword}] ({score}) {title[:50]}...")
 
-            # 페이지 방문 → 이미지 + og:description 동시 추출
-            image, snippet = get_article_info(link)
+            # 실제 언론사 URL로 방문 (없으면 Google RSS link 사용)
+            image, snippet = get_article_info(real_link or link)
 
             # RSS desc가 제목 반복이면 페이지 snippet으로 대체
             desc = desc_raw
