@@ -619,7 +619,7 @@ def to_html(all_articles):
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f6fb;">
         <tr><td align="center" style="padding:32px 16px;">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
-            <tr><td style="background:linear-gradient(to right,#003973 0%,#E5E5BE 51%,#003973 100%);background-size:200% auto;padding:28px 36px;">
+            <tr><td style="background:linear-gradient(to right,#1D2B64 0%,#F8CDDA 51%,#1D2B64 100%);background-size:200% auto;padding:28px 36px;">
               <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">WEEKLY APP MARKET NEWS</div>
               <div style="padding-top:8px;display:flex;align-items:center;gap:10px;">
                 <img src="{ICON_BASE64}"
@@ -634,7 +634,7 @@ def to_html(all_articles):
             <tr><td style="padding:24px 36px 8px 36px;font-size:15px;line-height:24px;color:#475569;">안녕하세요.<br>이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.</td></tr>
 
             <tr><td style="padding:16px 36px 8px 36px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#EFF1E7;border-radius:16px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F9ECF1;border-radius:16px;">
                 <tr><td style="padding:20px 24px;">
                   <div style="font-size:17px;line-height:26px;font-weight:800;color:#0f172a;margin-bottom:12px;">🔎 핵심 요약</div>
                   {summary_html}
@@ -660,7 +660,7 @@ def to_html(all_articles):
 def send_mail(html):
     recipients = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[앱마켓 뉴스레터] {today}"
+    msg["Subject"] = f"[앱 마켓 뉴스 레터] {today}"
     msg["From"] = f"{GMAIL_ID}@gmail.com"
     msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(html, "html", "utf-8"))
