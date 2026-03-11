@@ -2,6 +2,7 @@ import os
 import json
 import smtplib
 import re
+import base64, os
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -46,6 +47,13 @@ USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 GOOGLEBOT_UA = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 "
                 "(compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
+
+# ── 아이콘 Base64 ───────────────────────────────────────────  ← 여기에 삽입!
+import base64
+ICON_PATH = "icon.png"
+with open(ICON_PATH, "rb") as f:
+    _ext = os.path.splitext(ICON_PATH)[-1].lstrip(".").replace("jpg", "jpeg")
+    ICON_BASE64 = f"data:image/{_ext};base64," + base64.b64encode(f.read()).decode()
 
 # ── 봇 차단 도메인 ────────────────────────────────────────────
 BOT_BLOCKED_DOMAINS = {
@@ -593,7 +601,7 @@ def to_html(all_articles):
                         </div>
                         <div style="padding-top:8px;text-align:right;">
                           <a href="{a['link']}" style="display:inline-block;color:#ffffff;text-decoration:none;
-                             font-size:11px;font-weight:700;padding:5px 11px;border-radius:6px;background-color:#374151;">
+                             font-size:12px;font-weight:700;padding:6px 13px;border-radius:8px;background-color:#374151;">
                              🔗원문보기
                           </a>
                         </div>
@@ -607,13 +615,30 @@ def to_html(all_articles):
     empty_html = '<tr><td style="padding:0 36px 24px;color:#94a3b8;">이번 주 관련 기사를 찾지 못했습니다.</td></tr>'
 
     return f"""
-    <html><body style="margin:0;padding:0;background-color:#f3f6fb;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#1f2937;">
+<html><body style="margin:0;padding:0;background-color:#f3f6fb;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#1f2937;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f6fb;">
         <tr><td align="center" style="padding:32px 16px;">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
             <tr><td style="background:linear-gradient(to right,#0f1f3d 0%,#1a3a6b 50%,#1e4d9b 100%);padding:28px 36px;">
               <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">WEEKLY APP MARKET NEWS</div>
-              <div style="padding-top:8px;font-size:30px;line-height:38px;color:#ffffff;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">📊 앱마켓 뉴스 레터</div>
+              <div style="padding-top:8px;display:flex;align-items:center;gap:10px;">
+                <img src="{ICON_BASE64}"
+                     width="48" height="48"
+                     style="width:48px;height:48px;display:inline-block;vertical-align:middle;"
+                     alt="앱마켓 아이콘">
+                <span style="
+                  font-size:30px;
+                  line-height:38px;
+                  font-weight:800;
+                  font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;
+                  background-image: linear-gradient(to right, #003973 0%, #E5E5BE 51%, #003973 100%);
+                  background-size: 200% auto;
+                  -webkit-background-clip: text;
+                  -webkit-text-fill-color: transparent;
+                  background-clip: text;
+                  color: transparent;
+                ">앱마켓 뉴스 레터</span>
+              </div>
               <div style="padding-top:10px;font-size:15px;line-height:22px;color:#dbeafe;">검색 범위 : {week_ago} ~ {today}</div>
             </td></tr>
 
