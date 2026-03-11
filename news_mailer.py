@@ -148,7 +148,6 @@ def get_press_name(url: str, title: str = "") -> str:
         if domain == key or domain.endswith("." + key) or key in domain:
             return name
 
-    # 구글 뉴스 RSS 제목 원본(언론사명 포함)으로 추출
     if " - " in title:
         maybe_press = title.rsplit(" - ", 1)[-1].strip()
         if 1 < len(maybe_press) <= 30:
@@ -169,18 +168,25 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
     base_path = parsed.path.rsplit("/", 1)[0] + "/"
     return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
 
-def get_article_image(url: str, depth=0) -> str | None:
+
+# ── 기사 페이지에서 이미지 + 요약 동시 추출 ──────────────────
+# 기존 get_article_image() 대체: 페이지를 한 번만 방문해서 둘 다 가져옴
+def get_article_info(url: str, depth=0) -> tuple:
+    """(image_url | None, snippet | None) 반환"""
     if not url or not url.startswith("http") or depth > 3:
-        return None
+        return None, None
     try:
         req = Request(url)
-        req.add_header("User-Agent", "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
+        req.add_header("User-Agent", "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 "
+            "(compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
         req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 
         with urlopen(req, timeout=10) as resp:
             current_url = resp.url
             html = resp.read().decode("utf-8", errors="ignore")
 
+        # 구글 뉴스 리다이렉트 우회
         if "news.google.com" in current_url or "news.url.google.com" in current_url:
             m = re.search(r'data-n-au=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
             if not m:
@@ -190,7 +196,7 @@ def get_article_image(url: str, depth=0) -> str | None:
             if m:
                 real_url = m.group(1).replace("&amp;", "&")
                 if real_url and real_url != url:
-                    return get_article_image(real_url, depth=depth+1)
+                    return get_article_info(real_url, depth=depth+1)
 
         def extract_meta(html_text, meta_name):
             pat1 = rf'<meta\s+[^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\'][^>]*?content\s*=\s*["\']([^"\']+)["\']'
@@ -201,15 +207,27 @@ def get_article_image(url: str, depth=0) -> str | None:
             if m: return m.group(1).strip()
             return None
 
-        img = extract_meta(html, "og:image") or extract_meta(html, "twitter:image")
-        if img:
-            final_img_url = make_absolute_url(current_url, img)
-            if "lh3.googleusercontent.com" in final_img_url or "news.google.com" in final_img_url:
-                return None
-            return final_img_url
-        return None
+        # 이미지 추출
+        img_raw = extract_meta(html, "og:image") or extract_meta(html, "twitter:image")
+        image = None
+        if img_raw:
+            final_img = make_absolute_url(current_url, img_raw)
+            if "lh3.googleusercontent.com" not in final_img and "news.google.com" not in final_img:
+                image = final_img
+
+        # 요약 추출 (og:description → twitter:description → description 순)
+        snippet_raw = (
+            extract_meta(html, "og:description")
+            or extract_meta(html, "twitter:description")
+            or extract_meta(html, "description")
+        )
+        snippet = clean_spaces(snippet_raw) if snippet_raw else None
+
+        return image, snippet
+
     except Exception:
-        return None
+        return None, None
+
 
 def dedupe_articles(articles):
     seen = set()
@@ -248,7 +266,6 @@ POLICY_HINTS = [
 def is_relevant_article(keyword, title, desc):
     text = normalize_text(f"{title} {desc}")
     kw = normalize_text(keyword)
-
     if kw not in text:
         return False
     for bad in KEYWORDS_EXCLUDE:
@@ -265,19 +282,12 @@ def score_article(keyword, title, desc):
     text = normalize_text(f"{title} {desc}")
     kw = normalize_text(keyword)
     score = 0
-
-    if kw in normalize_text(title):
-        score += 5
-    if kw in normalize_text(desc):
-        score += 3
-
+    if kw in normalize_text(title): score += 5
+    if kw in normalize_text(desc):  score += 3
     for p in KEYWORDS_PLATFORM:
-        if normalize_text(p) in text:
-            score += 2
+        if normalize_text(p) in text: score += 2
     for p in POLICY_HINTS:
-        if normalize_text(p) in text:
-            score += 1
-
+        if normalize_text(p) in text: score += 1
     strong = [
         "인앱결제", "외부결제", "앱스토어", "플레이스토어", "애플", "구글",
         "수수료", "정책", "규제", "소송", "방통위", "공정위",
@@ -285,8 +295,7 @@ def score_article(keyword, title, desc):
     ]
     title_norm = normalize_text(title)
     for w in strong:
-        if normalize_text(w) in title_norm:
-            score += 2
+        if normalize_text(w) in title_norm: score += 2
     return score
 
 
@@ -307,9 +316,9 @@ def fetch_naver_articles(keyword):
 
     articles = []
     for item in data.get("items", []):
-        title = clean_spaces(strip_html(item.get("title", "")))   # ← title_raw 없음, title만 사용
-        desc = clean_spaces(strip_html(item.get("description", "")))
-        link = item.get("originallink") or item.get("link", "")
+        title = clean_spaces(strip_html(item.get("title", "")))
+        desc  = clean_spaces(strip_html(item.get("description", "")))
+        link  = item.get("originallink") or item.get("link", "")
         pub_str = item.get("pubDate", "")
 
         try:
@@ -323,11 +332,15 @@ def fetch_naver_articles(keyword):
         if not title or not is_relevant_article(keyword, title, desc):
             continue
 
-        press = get_press_name(link, title)   # ← title 사용 (Naver는 언론사명 미포함)
+        press = get_press_name(link, title)
         score = score_article(keyword, title, desc)
         print(f"  [NAVER/{keyword}] ({score}) {title[:50]}...")
 
-        image = get_article_image(link)
+        image, snippet = get_article_info(link)
+
+        # desc가 비어 있거나 제목과 같으면 페이지에서 추출한 snippet으로 보완
+        if not desc or normalize_text(desc) == normalize_text(title):
+            desc = snippet or ""
 
         articles.append({
             "title": title, "press": press, "link": link,
@@ -364,16 +377,16 @@ def fetch_google_articles(keyword):
             if not (title_el is not None and link_el is not None and title_el.text):
                 continue
 
-            # Google RSS 제목 형식: "기사 제목 - 언론사명"
+            # Google RSS 제목: "기사 제목 - 언론사명" → 언론사명 분리
             title_raw = clean_spaces(strip_html(title_el.text))
             title = title_raw.rsplit(" - ", 1)[0].strip() if " - " in title_raw else title_raw
             press = get_press_name(link_el.text.strip(), title_raw)  # 언론사 추출엔 원본 사용
 
             link = link_el.text.strip()
-            # Google RSS desc도 "제목 - 언론사" 형태인 경우 제목 부분 제거
+
+            # Google RSS desc는 보통 "제목 언론사명" 반복 → 그대로 두고 아래에서 snippet으로 대체
             desc_raw = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
-            desc = desc_raw.rsplit(" - ", 1)[0].strip() if desc_raw.startswith(title) else desc_raw
-            pub_str = pub_el.text if pub_el is not None else ""
+            pub_str  = pub_el.text if pub_el is not None else ""
 
             try:
                 pub_dt = parsedate_to_datetime(pub_str).astimezone(timezone.utc)
@@ -383,13 +396,19 @@ def fetch_google_articles(keyword):
             except:
                 continue
 
-            if not title or not is_relevant_article(keyword, title, desc):
+            if not title or not is_relevant_article(keyword, title, desc_raw):
                 continue
 
-            score = score_article(keyword, title, desc)
+            score = score_article(keyword, title, desc_raw)
             print(f"  [GOOGLE/{keyword}] ({score}) {title[:50]}...")
 
-            image = get_article_image(link)
+            # 페이지 방문 → 이미지 + og:description 동시 추출
+            image, snippet = get_article_info(link)
+
+            # RSS desc가 제목 반복이면 페이지 snippet으로 대체
+            desc = desc_raw
+            if not desc or normalize_text(desc).startswith(normalize_text(title)):
+                desc = snippet or ""
 
             articles.append({
                 "title": title, "press": press, "link": link,
@@ -420,7 +439,6 @@ def to_bullet_style(text):
     for b in BAD_STARTS:
         if text.startswith(b):
             return None
-
     endings = [
         ("하고 있다", ""), ("되고 있다", ""), ("병행되고 있다", "병행"),
         ("시행 중이다", "시행"), ("논의 중이다", "논의"), ("검토 중이다", "검토"),
@@ -437,7 +455,6 @@ def to_bullet_style(text):
         if text.endswith(old):
             text = text[:-len(old)] + new
             break
-
     text = re.sub(r"[.。?！!,]+$", "", text).strip()
     return text if len(text) > 10 else None
 
@@ -471,7 +488,7 @@ def build_summary_html(all_articles):
     return "".join(parts) or '<div style="font-size:14px;color:#94a3b8;">이번 주 주요 내용을 찾지 못했습니다.</div>'
 
 
-# ── HTML 변환 (이미지 포함) ───────────────────────────────────
+# ── HTML 변환 ────────────────────────────────────────────────
 def to_html(all_articles):
     summary_html = build_summary_html(all_articles)
     palette = ["#4f46e5", "#db2777", "#d97706", "#059669", "#2563eb", "#dc2626", "#7c3aed", "#0891b2"]
@@ -507,11 +524,9 @@ def to_html(all_articles):
                 image_td = ""
                 text_padding_left = "16px"
 
-            # summary가 비어 있거나, 제목과 동일하거나, 제목으로 시작(+언론사명 등 후미 추가)하면 안내 문구로 대체
+            # summary가 없거나 제목과 동일하면 안내 문구
             summary_text = a.get("summary", "")
-            summary_norm = normalize_text(summary_text)
-            title_norm   = normalize_text(a["title"])
-            if not summary_text or summary_norm == title_norm or summary_norm.startswith(title_norm):
+            if not summary_text or normalize_text(summary_text) == normalize_text(a["title"]):
                 summary_text = "원문 링크를 확인해주세요."
 
             cards_html += f"""
