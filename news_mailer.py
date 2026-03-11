@@ -634,7 +634,7 @@ def to_html(all_articles):
             <tr><td style="padding:24px 36px 8px 36px;font-size:15px;line-height:24px;color:#475569;">안녕하세요.<br>이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.</td></tr>
 
             <tr><td style="padding:16px 36px 8px 36px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#E1E8EA;border-radius:16px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#EFF1E7;border-radius:16px;">
                 <tr><td style="padding:20px 24px;">
                   <div style="font-size:17px;line-height:26px;font-weight:800;color:#0f172a;margin-bottom:12px;">🔎 핵심 요약</div>
                   {summary_html}
