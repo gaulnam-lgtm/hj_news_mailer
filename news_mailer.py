@@ -481,6 +481,8 @@ def fetch_google_articles(keyword):
                 continue
 
             title_raw = clean_spaces(strip_html(title_el.text))
+            title = title_raw.rsplit(" - ", 1)[0].strip() if " - " in title_raw else title_raw
+            press = get_press_name(link, title_raw)
             if " - " in title_raw:
                 title = title_raw.rsplit(" - ", 1)[0].strip()
             else:
