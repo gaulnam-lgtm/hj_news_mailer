@@ -290,7 +290,7 @@ def build_summary_html(all_articles):
     return "".join(parts) or '<div style="font-size:14px;color:#94a3b8;">이번 주 주요 내용을 찾지 못했습니다.</div>'
 
 
-# ── HTML 변환 (제목을 더 세련되게 수정) ───────────────────────
+# ── HTML 변환 (전체 너비 90% 축소 + 버튼 85% 크기) ─────────────
 def to_html(all_articles):
     summary_html = build_summary_html(all_articles)
     palette = ["#4f46e5", "#db2777", "#d97706", "#059669", "#2563eb", "#dc2626", "#7c3aed", "#0891b2"]
@@ -340,7 +340,7 @@ def to_html(all_articles):
                         </div>
                         <div style="padding-top:8px;text-align:right;">
                           <a href="{a['link']}" style="display:inline-block;color:#ffffff;text-decoration:none;
-                             font-size:12px;font-weight:700;padding:6px 13px;border-radius:8px;background-color:#374151;">
+                             font-size:10px;font-weight:700;padding:5px 11px;border-radius:6px;background-color:#374151;">
                              🔗 기사보기
                           </a>
                         </div>
@@ -357,9 +357,10 @@ def to_html(all_articles):
     <html><body style="margin:0;padding:0;background-color:#f3f6fb;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#1f2937;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f6fb;">
         <tr><td align="center" style="padding:32px 16px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:1000px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" 
+                 style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;">   <!-- 1000px → 900px (90%) -->
             
-            <!-- 헤더 (더 세련된 타이틀 적용) -->
+            <!-- 헤더 -->
             <tr><td style="background:linear-gradient(to right,#0f1f3d 0%,#1a3a6b 50%,#1e4d9b 100%);padding:28px 36px;">
               <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">WEEKLY APP MARKET NEWS</div>
               <div style="padding-top:8px;font-size:30px;line-height:38px;color:#ffffff;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
@@ -399,11 +400,11 @@ def to_html(all_articles):
     """
 
 
-# ── 메일 발송 (제목도 뉴스레터로 세련되게 변경) ───────────────
+# ── 메일 발송 ───────────────────────────────────────────────
 def send_mail(html):
     recipients = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[이번주 앱마켓 뉴스레터] {today}"   # ← 여기 변경
+    msg["Subject"] = f"[이번주 앱마켓 뉴스레터] {today}"
     msg["From"] = f"{GMAIL_ID}@gmail.com"
     msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(html, "html", "utf-8"))
@@ -431,7 +432,6 @@ if __name__ == "__main__":
             all_articles[kw] = combined[:5]
             print(f"    → {len(all_articles[kw])}건 수집")
 
-    # 전역 중복 제거
     print("🔄 전역 중복 제거 중...")
     link_to_entries = defaultdict(list)
     for kw, arts in all_articles.items():
