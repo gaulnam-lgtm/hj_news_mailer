@@ -227,10 +227,8 @@ def get_article_info(url: str, depth=0) -> tuple:
         if "news.google.com" in current_url:
             return None, None
 
-        # Google News 기본 설명 문구 or 사이트 슬로건(너무 짧은 경우) 필터링
-        if snippet:
-            if "google news" in snippet.lower() or len(snippet) < 30:
-                snippet = None
+        if snippet and not is_valid_snippet(snippet):
+            snippet = None
 
         # 이미지 URL 유효성 검증: HEAD 요청으로 실제 이미지인지 확인
         if image:
@@ -251,7 +249,24 @@ def get_article_info(url: str, depth=0) -> tuple:
         return None, None
 
 
-def dedupe_articles(articles):
+def is_valid_snippet(text: str) -> bool:
+    """기사 요약으로 쓸 수 있는 품질인지 검증"""
+    if not text or len(text) < 30:
+        return False
+    # Google News 기본 문구
+    if "google news" in text.lower():
+        return False
+    # 쉼표가 6개 이상 → SEO 키워드 나열 (뉴스토마토 등)
+    if text.count(",") + text.count("，") >= 6:
+        return False
+    # 문장 종결어미 없이 100자 이상 → 슬로건/키워드 목록
+    has_sentence_end = bool(re.search(r"[다요죠까네\.!?]", text))
+    if not has_sentence_end and len(text) > 60:
+        return False
+    return True
+
+
+
     seen = set()
     result = []
     for article in articles:
