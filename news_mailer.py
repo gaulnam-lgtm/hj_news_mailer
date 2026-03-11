@@ -7,7 +7,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import parsedate_to_datetime
 from urllib.request import Request, urlopen
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 
 # ── 설정 ────────────────────────────────────────────────────
@@ -68,6 +68,64 @@ def clean_spaces(text):
 def get_domain(url):
     m = re.search(r"https?://(?:www\.)?([^/]+)", url or "")
     return m.group(1) if m else ""
+
+
+# ── 기사 대표 이미지 자동 추출 (og:image / twitter:image) ─────
+def make_absolute_url(base_url: str, img_url: str) -> str:
+    """상대경로 이미지를 절대경로로 변환"""
+    if not img_url:
+        return ""
+    if img_url.startswith(("http://", "https://")):
+        return img_url
+    if img_url.startswith("//"):
+        return "https:" + img_url
+    parsed = urlparse(base_url)
+    if img_url.startswith("/"):
+        return f"{parsed.scheme}://{parsed.netloc}{img_url}"
+    # 드물지만 상대경로일 경우
+    base_path = parsed.path.rsplit("/", 1)[0] + "/"
+    return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
+
+
+def get_article_image(url: str) -> str | None:
+    """기사 원문에서 대표 이미지(og:image) 자동 추출"""
+    if not url or not url.startswith("http"):
+        return None
+
+    try:
+        req = Request(url)
+        req.add_header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+        )
+        with urlopen(req, timeout=8) as resp:
+            if resp.getcode() != 200:
+                return None
+            html = resp.read().decode("utf-8", errors="ignore")
+
+        # 1. og:image (대부분의 뉴스사이트가 제공)
+        m = re.search(
+            r'<meta\s+(?:property|name)=["\']og:image["\']\s+content=["\']([^"\']+)["\']',
+            html,
+            re.IGNORECASE
+        )
+        if m:
+            return make_absolute_url(url, m.group(1).strip())
+
+        # 2. twitter:image (fallback)
+        m = re.search(
+            r'<meta\s+(?:name|property)=["\']twitter:image["\']\s+content=["\']([^"\']+)["\']',
+            html,
+            re.IGNORECASE
+        )
+        if m:
+            return make_absolute_url(url, m.group(1).strip())
+
+        return None
+    except Exception as e:
+        print(f"  [IMG] 이미지 추출 실패: {url[:70]}... ({type(e).__name__})")
+        return None
 
 
 def dedupe_articles(articles):
@@ -211,6 +269,10 @@ def fetch_articles(keyword):
         score = score_article(keyword, title, desc)
 
         print(f"  [{keyword}] ({score}) {title[:50]} | {desc[:50]}")
+
+        # 대표 이미지 자동 추출 (여기서만 호출 → 불필요한 요청 최소화)
+        image = get_article_image(link)
+
         articles.append({
             "title": title,
             "press": press,
@@ -219,6 +281,7 @@ def fetch_articles(keyword):
             "date": pub_label,
             "score": score,
             "keyword": keyword,
+            "image": image,          # ← 추가
         })
 
     # 점수순 정렬 → 중복 제거
@@ -317,7 +380,7 @@ def build_summary_html(all_articles):
     return "".join(parts)
 
 
-# ── HTML 변환 ───────────────────────────────────────────────
+# ── HTML 변환 (기사 카드 좌측에 120×90 이미지 추가) ─────────────
 def to_html(all_articles):
     summary_html = build_summary_html(all_articles)
 
@@ -333,14 +396,41 @@ def to_html(all_articles):
 
         for a in articles:
             total_count += 1
+
+            # 이미지 HTML 생성 (없으면 플레이스홀더)
+            img_url = a.get("image") or ""
+            if img_url:
+                image_html = f'''
+                  <img src="{img_url}" 
+                       width="120" 
+                       height="90" 
+                       style="width:120px;height:90px;object-fit:cover;border-radius:10px;display:block;" 
+                       alt="기사 이미지">
+                '''
+            else:
+                image_html = '''
+                  <div style="width:120px;height:90px;background-color:#e2e8f0;border-radius:10px;
+                              display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:28px;">
+                    📰
+                  </div>
+                '''
+
             cards_html += f"""
             <tr>
               <td style="padding:0 36px 8px 36px;">
                 <div style="border:1.5px solid #e5e7eb;border-radius:14px;overflow:hidden;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                     <tr>
+                      <!-- 기존 세로 컬러바 (위치 그대로 유지) -->
                       <td width="5" style="background-color:{color};">&nbsp;</td>
-                      <td style="padding:11px 18px;background-color:#ffffff;">
+                      
+                      <!-- 새로 추가된 대표 이미지 영역 (120×90) -->
+                      <td width="130" style="padding:11px 0 11px 12px;background-color:#ffffff;vertical-align:top;">
+                        {image_html}
+                      </td>
+                      
+                      <!-- 기존 텍스트 영역 (키워드·제목·요약 위치·색상 그대로) -->
+                      <td style="padding:11px 18px 11px 8px;background-color:#ffffff;vertical-align:top;">
                         <div style="margin-bottom:5px;">
                           <span style="display:inline-block;background-color:{tag_bg};color:{color};
                                        font-size:11px;line-height:17px;font-weight:700;
