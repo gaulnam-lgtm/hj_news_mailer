@@ -19,7 +19,7 @@ KEYWORDS = json.loads(os.environ["KEYWORDS"])
 NAVER_CLIENT_ID = os.environ["NAVER_CLIENT_ID"]
 NAVER_CLIENT_SECRET = os.environ["NAVER_CLIENT_SECRET"]
 
-MIN_ARTICLE_SCORE = int(os.environ.get("MIN_ARTICLE_SCORE", "9"))
+MIN_ARTICLE_SCORE = int(os.environ.get("MIN_ARTICLE_SCORE", "7"))
 
 KEYWORDS_PLATFORM = json.loads(
     os.environ.get("KEYWORDS_PLATFORM", json.dumps([
@@ -266,21 +266,46 @@ def get_article_image(url: str) -> str | None:
     try:
         req = Request(url)
         req.add_header("User-Agent", USER_AGENT)
-        with urlopen(req, timeout=8) as resp:
+        req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+        req.add_header("Accept-Language", "ko-KR,ko;q=0.9,en;q=0.8")
+
+        with urlopen(req, timeout=12) as resp:   # 타임아웃도 조금 늘림
             if resp.getcode() != 200:
                 return None
             html = resp.read().decode("utf-8", errors="ignore")
 
-        m = re.search(r'<meta\s+(?:property|name)=["\']og:image["\']\s+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
-        if m:
-            return make_absolute_url(url, m.group(1).strip())
+        # ==================== 개선된 메타 추출 ====================
+        def extract_meta(html, meta_name):
+            # 1. property/name 먼저 나오는 경우
+            pat1 = rf'<meta\s+[^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\'][^>]*?content\s*=\s*["\']([^"\']+)["\']'
+            m = re.search(pat1, html, re.IGNORECASE)
+            if m:
+                return m.group(1).strip()
+            # 2. content 먼저 나오는 경우 (대다수 한국 언론사)
+            pat2 = rf'<meta\s+[^>]*?content\s*=\s*["\']([^"\']+)["\'][^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\']'
+            m = re.search(pat2, html, re.IGNORECASE)
+            if m:
+                return m.group(1).strip()
+            return None
 
-        m = re.search(r'<meta\s+(?:name|property)=["\']twitter:image["\']\s+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
-        if m:
-            return make_absolute_url(url, m.group(1).strip())
+        # og:image 우선
+        img = extract_meta(html, "og:image")
+        if img:
+            return make_absolute_url(url, img)
+
+        # twitter:image
+        img = extract_meta(html, "twitter:image")
+        if img:
+            return make_absolute_url(url, img)
+
+        # twitter:image:src (일부 사이트)
+        img = extract_meta(html, "twitter:image:src")
+        if img:
+            return make_absolute_url(url, img)
 
         return None
-    except:
+    except Exception as e:
+        print(f"  [IMAGE FETCH ERROR] {url[:60]}... {e}")
         return None
 
 def dedupe_articles(articles):
@@ -606,7 +631,7 @@ def to_html(all_articles):
                         <div style="padding-top:8px;text-align:right;">
                           <a href="{a['link']}" style="display:inline-block;color:#ffffff;text-decoration:none;
                              font-size:12px;font-weight:700;padding:6px 13px;border-radius:8px;background-color:#374151;">
-                             원문보기
+                             🔗원문보기
                           </a>
                         </div>
                       </td>
@@ -625,7 +650,7 @@ def to_html(all_articles):
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:1000px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
             <tr><td style="background:linear-gradient(to right,#0f1f3d 0%,#1a3a6b 50%,#1e4d9b 100%);padding:28px 36px;">
               <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">WEEKLY APP MARKET NEWS</div>
-              <div style="padding-top:8px;font-size:30px;line-height:38px;color:#ffffff;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">📊 이번주 앱마켓 동향 기사</div>
+              <div style="padding-top:8px;font-size:30px;line-height:38px;color:#ffffff;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">📊 앱마켓 뉴스 레터</div>
               <div style="padding-top:10px;font-size:15px;line-height:22px;color:#dbeafe;">검색 범위 : {week_ago} ~ {today}</div>
             </td></tr>
 
@@ -658,7 +683,7 @@ def to_html(all_articles):
 def send_mail(html):
     recipients = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[이번주 앱마켓 동향 기사] {today}"
+    msg["Subject"] = f"[앱마켓 뉴스레터] {today}"
     msg["From"] = f"{GMAIL_ID}@gmail.com"
     msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(html, "html", "utf-8"))
