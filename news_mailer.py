@@ -434,7 +434,7 @@ def fetch_naver_articles(keyword):
         if not title or not is_relevant_article(keyword, title, desc):
             continue
 
-        press = get_press_name(link, title)
+        press = get_press_name(link, title_raw)
         score = score_article(keyword, title, desc)
         print(f"  [NAVER/{keyword}] ({score}) {title[:50]}...")
 
@@ -480,7 +480,11 @@ def fetch_google_articles(keyword):
             if not (title_el is not None and link_el is not None and title_el.text):
                 continue
 
-            title = clean_spaces(strip_html(title_el.text))
+            title_raw = clean_spaces(strip_html(title_el.text))
+            if " - " in title_raw:
+                title = title_raw.rsplit(" - ", 1)[0].strip()
+            else:
+            title = title_raw
             link = link_el.text.strip()
             desc = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
             pub_str = pub_el.text if pub_el is not None else ""
@@ -643,7 +647,7 @@ def to_html(all_articles):
                           {a['title']}
                         </div>
                         <div style="padding-top:5px;font-size:13.5px;line-height:21px;color:#4b5563;">
-                          {a['summary'] or '원문 링크를 확인해주세요.'}
+                          {a['summary'] if a.get('summary') and normalize_text(a['summary']) != normalize_text(a['title']) else '원문 링크를 확인해주세요.'}
                         </div>
                         <div style="padding-top:6px;font-size:12px;line-height:18px;color:#94a3b8;">
                           {a['date']}{' · ' + a['press'] if a.get('press') else ''}
