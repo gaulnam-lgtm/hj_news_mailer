@@ -370,7 +370,9 @@ def fetch_google_articles(keyword):
             press = get_press_name(link_el.text.strip(), title_raw)  # 언론사 추출엔 원본 사용
 
             link = link_el.text.strip()
-            desc = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
+            # Google RSS desc도 "제목 - 언론사" 형태인 경우 제목 부분 제거
+            desc_raw = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
+            desc = desc_raw.rsplit(" - ", 1)[0].strip() if desc_raw.startswith(title) else desc_raw
             pub_str = pub_el.text if pub_el is not None else ""
 
             try:
@@ -505,9 +507,11 @@ def to_html(all_articles):
                 image_td = ""
                 text_padding_left = "16px"
 
-            # summary가 비어 있거나 제목과 동일하면 안내 문구로 대체
+            # summary가 비어 있거나, 제목과 동일하거나, 제목으로 시작(+언론사명 등 후미 추가)하면 안내 문구로 대체
             summary_text = a.get("summary", "")
-            if not summary_text or normalize_text(summary_text) == normalize_text(a["title"]):
+            summary_norm = normalize_text(summary_text)
+            title_norm   = normalize_text(a["title"])
+            if not summary_text or summary_norm == title_norm or summary_norm.startswith(title_norm):
                 summary_text = "원문 링크를 확인해주세요."
 
             cards_html += f"""
