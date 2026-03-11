@@ -188,7 +188,7 @@ def fetch_naver_articles(keyword):
     articles.sort(key=lambda x: x["score"], reverse=True)
     articles = dedupe_articles(articles)
     articles = [a for a in articles if a["score"] >= MIN_ARTICLE_SCORE]
-    return articles[:5]
+    return articles[:3]
 
 
 # ── 구글 뉴스 RSS 검색 ───────────────────────────────────────
@@ -240,7 +240,7 @@ def fetch_google_articles(keyword):
         articles.sort(key=lambda x: x["score"], reverse=True)
         articles = dedupe_articles(articles)
         articles = [a for a in articles if a["score"] >= MIN_ARTICLE_SCORE]
-        return articles[:5]
+        return articles[:3]
 
     except Exception as e:
         print(f"  [ERROR] Google {keyword} 실패: {e}")
@@ -429,7 +429,7 @@ if __name__ == "__main__":
         combined = dedupe_articles(combined)
         combined = [a for a in combined if a.get("score", 0) >= MIN_ARTICLE_SCORE]
         if combined:
-            all_articles[kw] = combined[:5]
+            all_articles[kw] = combined[:3]
             print(f"    → {len(all_articles[kw])}건 수집")
 
     print("🔄 전역 중복 제거 중...")
