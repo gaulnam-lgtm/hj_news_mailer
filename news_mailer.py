@@ -9,7 +9,7 @@ from email.utils import parsedate_to_datetime
 from urllib.request import Request, urlopen
 from urllib.parse import quote, urlparse
 from collections import defaultdict
-from xml.etree import ElementTree as ET   # Google RSS용
+from xml.etree import ElementTree as ET
 
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
@@ -290,7 +290,7 @@ def build_summary_html(all_articles):
     return "".join(parts) or '<div style="font-size:14px;color:#94a3b8;">이번 주 주요 내용을 찾지 못했습니다.</div>'
 
 
-# ── HTML 변환 (이미지 포함) ───────────────────────────────────
+# ── HTML 변환 (제목을 더 세련되게 수정) ───────────────────────
 def to_html(all_articles):
     summary_html = build_summary_html(all_articles)
     palette = ["#4f46e5", "#db2777", "#d97706", "#059669", "#2563eb", "#dc2626", "#7c3aed", "#0891b2"]
@@ -358,14 +358,21 @@ def to_html(all_articles):
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f6fb;">
         <tr><td align="center" style="padding:32px 16px;">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:1000px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
-            <!-- 헤더 생략 (기존 그대로) -->
+            
+            <!-- 헤더 (더 세련된 타이틀 적용) -->
             <tr><td style="background:linear-gradient(to right,#0f1f3d 0%,#1a3a6b 50%,#1e4d9b 100%);padding:28px 36px;">
               <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">WEEKLY APP MARKET NEWS</div>
-              <div style="padding-top:8px;font-size:30px;line-height:38px;color:#ffffff;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">📊 이번주 앱마켓 동향 기사</div>
+              <div style="padding-top:8px;font-size:30px;line-height:38px;color:#ffffff;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
+                📊 이번주 앱마켓 뉴스레터
+              </div>
               <div style="padding-top:10px;font-size:15px;line-height:22px;color:#dbeafe;">검색 범위 : {week_ago} ~ {today}</div>
             </td></tr>
-            <!-- 인사, 핵심요약, 주요기사 부분은 기존 그대로 -->
-            <tr><td style="padding:24px 36px 8px 36px;font-size:15px;line-height:24px;color:#475569;">안녕하세요.<br>이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.</td></tr>
+
+            <tr><td style="padding:24px 36px 8px 36px;font-size:15px;line-height:24px;color:#475569;">
+              안녕하세요.<br>
+              이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.
+            </td></tr>
+
             <tr><td style="padding:16px 36px 8px 36px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#e8f4fd;border-radius:16px;">
                 <tr><td style="padding:20px 24px;">
@@ -374,11 +381,17 @@ def to_html(all_articles):
                 </td></tr>
               </table>
             </td></tr>
+
             <tr><td style="padding:24px 36px 12px 36px;">
               <div style="font-size:22px;line-height:30px;font-weight:800;color:#0f172a;">📰 주요 기사</div>
             </td></tr>
+
             {cards_html if total_count > 0 else empty_html}
-            <tr><td style="border-top:1px solid #e5e7eb;padding:20px 36px 28px 36px;font-size:13px;line-height:22px;color:#94a3b8;">자동 발송 · {today}</td></tr>
+
+            <tr><td style="border-top:1px solid #e5e7eb;padding:20px 36px 28px 36px;font-size:13px;line-height:22px;color:#94a3b8;">
+              자동 발송 · {today}
+            </td></tr>
+
           </table>
         </td></tr>
       </table>
@@ -386,11 +399,11 @@ def to_html(all_articles):
     """
 
 
-# ── 메일 발송 ───────────────────────────────────────────────
+# ── 메일 발송 (제목도 뉴스레터로 세련되게 변경) ───────────────
 def send_mail(html):
     recipients = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[이번주 앱마켓 동향 기사] {today}"
+    msg["Subject"] = f"[이번주 앱마켓 뉴스레터] {today}"   # ← 여기 변경
     msg["From"] = f"{GMAIL_ID}@gmail.com"
     msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(html, "html", "utf-8"))
@@ -418,7 +431,7 @@ if __name__ == "__main__":
             all_articles[kw] = combined[:5]
             print(f"    → {len(all_articles[kw])}건 수집")
 
-    # 전역 중복 제거 (기존 로직 그대로)
+    # 전역 중복 제거
     print("🔄 전역 중복 제거 중...")
     link_to_entries = defaultdict(list)
     for kw, arts in all_articles.items():
