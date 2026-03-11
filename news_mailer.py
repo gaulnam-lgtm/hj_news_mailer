@@ -341,7 +341,7 @@ def to_html(all_articles):
                         <div style="padding-top:8px;text-align:right;">
                           <a href="{a['link']}" style="display:inline-block;color:#ffffff;text-decoration:none;
                              font-size:10px;font-weight:700;padding:5px 11px;border-radius:6px;background-color:#374151;">
-                             🔗 기사보기
+                             🔗 원문보기
                           </a>
                         </div>
                       </td>
