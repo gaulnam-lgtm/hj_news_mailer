@@ -62,175 +62,81 @@ def get_domain(url):
     return m.group(1).lower() if m else ""
 
 PRESS_MAP = {
-    # 통신 / 종합
-    "yna.co.kr": "연합뉴스",
-    "yonhapnews.co.kr": "연합뉴스",
-    "newsis.com": "뉴시스",
-    "news1.kr": "뉴스1",
-    "nocutnews.co.kr": "노컷뉴스",
-    "ohmynews.com": "오마이뉴스",
-    "pressian.com": "프레시안",
-    "newspim.com": "뉴스핌",
-    "newdaily.co.kr": "뉴데일리",
-    "viewsnnews.com": "뷰스앤뉴스",
-    "upinews.kr": "UPI뉴스",
-    "anewsa.com": "아시아뉴스통신",
-    "sisajournal.com": "시사저널",
-    "sisain.co.kr": "시사IN",
-    "ilyo.co.kr": "일요신문",
-    "kukinews.com": "쿠키뉴스",
-    "mediatoday.co.kr": "미디어오늘",
-    "journalist.or.kr": "기자협회보",
+    "yna.co.kr": "연합뉴스", "yonhapnews.co.kr": "연합뉴스",
+    "newsis.com": "뉴시스", "news1.kr": "뉴스1",
+    "nocutnews.co.kr": "노컷뉴스", "ohmynews.com": "오마이뉴스",
+    "pressian.com": "프레시안", "newspim.com": "뉴스핌",
+    "newdaily.co.kr": "뉴데일리", "viewsnnews.com": "뷰스앤뉴스",
+    "upinews.kr": "UPI뉴스", "anewsa.com": "아시아뉴스통신",
+    "sisajournal.com": "시사저널", "sisain.co.kr": "시사IN",
+    "ilyo.co.kr": "일요신문", "kukinews.com": "쿠키뉴스",
+    "mediatoday.co.kr": "미디어오늘", "journalist.or.kr": "기자협회보",
     "pdjournal.com": "PD저널",
-
-    # 전국 일간지 / 경제지
-    "chosun.com": "조선일보",
-    "biz.chosun.com": "조선비즈",
-    "donga.com": "동아일보",
-    "joongang.co.kr": "중앙일보",
-    "joins.com": "중앙일보",
-    "hani.co.kr": "한겨레",
-    "khan.co.kr": "경향신문",
-    "munhwa.com": "문화일보",
-    "segye.com": "세계일보",
-    "hankookilbo.com": "한국일보",
-    "mk.co.kr": "매일경제",
-    "hankyung.com": "한국경제",
-    "sedaily.com": "서울경제",
-    "fnnews.com": "파이낸셜뉴스",
-    "mt.co.kr": "머니투데이",
-    "moneytoday.co.kr": "머니투데이",
-    "edaily.co.kr": "이데일리",
-    "asiae.co.kr": "아시아경제",
-    "ajunews.com": "아주경제",
-    "asiatoday.co.kr": "아시아투데이",
-    "heraldcorp.com": "헤럴드경제",
-    "seoulfn.com": "서울파이낸스",
-    "dealsite.co.kr": "딜사이트",
-    "thebell.co.kr": "더벨",
-    "newsway.co.kr": "뉴스웨이",
-    "cstimes.com": "컨슈머타임스",
-    "ccdailynews.com": "소비자가 만드는 신문",
-    "consumernews.co.kr": "컨슈머뉴스",
-
-    # IT / 산업 / 스타트업 / 게임
-    "etnews.com": "전자신문",
-    "dt.co.kr": "디지털타임스",
-    "ddaily.co.kr": "디지털데일리",
-    "digitaltoday.co.kr": "디지털투데이",
-    "zdnet.co.kr": "ZDNet Korea",
-    "zdnet.com": "ZDNet",
-    "bloter.net": "블로터",
-    "itworld.co.kr": "ITWorld",
-    "inews24.com": "아이뉴스24",
-    "thelec.kr": "디일렉",
-    "it.chosun.com": "IT조선",
-    "boannews.com": "보안뉴스",
-    "byline.network": "바이라인네트워크",
-    "hellot.net": "헬로티",
-    "platum.kr": "플래텀",
-    "venturesquare.net": "벤처스퀘어",
-    "beinews.net": "비아이뉴스",
-    "gamevu.co.kr": "게임뷰",
-    "inven.co.kr": "인벤",
-    "thisisgame.com": "디스이즈게임",
-    "gamefocus.co.kr": "게임포커스",
-    "gameple.co.kr": "게임플",
-    "gametoc.hankyung.com": "게임톡",
-    "etoday.co.kr": "이투데이",
-    "news.mtn.co.kr": "MTN뉴스",
-    "sentv.co.kr": "서울경제TV",
-
-    # 방송사
-    "kbs.co.kr": "KBS",
-    "news.kbs.co.kr": "KBS",
-    "mbc.co.kr": "MBC",
-    "imbc.com": "MBC",
-    "sbs.co.kr": "SBS",
-    "news.sbs.co.kr": "SBS",
-    "ytn.co.kr": "YTN",
-    "jtbc.co.kr": "JTBC",
-    "tvchosun.com": "TV조선",
-    "ichannela.com": "채널A",
-    "mbn.co.kr": "MBN",
-    "obs.co.kr": "OBS",
-    "ebs.co.kr": "EBS",
-    "yonhapnewstv.co.kr": "연합뉴스TV",
-
-    # 스포츠 / 연예
-    "sportsseoul.com": "스포츠서울",
-    "sports.khan.co.kr": "스포츠경향",
-    "osen.co.kr": "OSEN",
-    "xportsnews.com": "엑스포츠뉴스",
-    "starnews.com": "스타뉴스",
-    "starnewskorea.com": "스타뉴스",
-    "tenasia.co.kr": "텐아시아",
-    "sportalkorea.com": "스포탈코리아",
-
-    # 법률 / 공공 / 노동 / 여성
-    "lawtimes.co.kr": "법률신문",
-    "lec.co.kr": "법률저널",
-    "scourt.go.kr": "대한민국 법원",
-    "labortoday.co.kr": "매일노동뉴스",
+    "chosun.com": "조선일보", "biz.chosun.com": "조선비즈",
+    "donga.com": "동아일보", "joongang.co.kr": "중앙일보",
+    "joins.com": "중앙일보", "hani.co.kr": "한겨레",
+    "khan.co.kr": "경향신문", "munhwa.com": "문화일보",
+    "segye.com": "세계일보", "hankookilbo.com": "한국일보",
+    "mk.co.kr": "매일경제", "hankyung.com": "한국경제",
+    "sedaily.com": "서울경제", "fnnews.com": "파이낸셜뉴스",
+    "mt.co.kr": "머니투데이", "moneytoday.co.kr": "머니투데이",
+    "edaily.co.kr": "이데일리", "asiae.co.kr": "아시아경제",
+    "ajunews.com": "아주경제", "asiatoday.co.kr": "아시아투데이",
+    "heraldcorp.com": "헤럴드경제", "seoulfn.com": "서울파이낸스",
+    "dealsite.co.kr": "딜사이트", "thebell.co.kr": "더벨",
+    "newsway.co.kr": "뉴스웨이", "cstimes.com": "컨슈머타임스",
+    "ccdailynews.com": "소비자가 만드는 신문", "consumernews.co.kr": "컨슈머뉴스",
+    "etnews.com": "전자신문", "dt.co.kr": "디지털타임스",
+    "ddaily.co.kr": "디지털데일리", "digitaltoday.co.kr": "디지털투데이",
+    "zdnet.co.kr": "ZDNet Korea", "zdnet.com": "ZDNet",
+    "bloter.net": "블로터", "itworld.co.kr": "ITWorld",
+    "inews24.com": "아이뉴스24", "thelec.kr": "디일렉",
+    "it.chosun.com": "IT조선", "boannews.com": "보안뉴스",
+    "byline.network": "바이라인네트워크", "hellot.net": "헬로티",
+    "platum.kr": "플래텀", "venturesquare.net": "벤처스퀘어",
+    "beinews.net": "비아이뉴스", "gamevu.co.kr": "게임뷰",
+    "inven.co.kr": "인벤", "thisisgame.com": "디스이즈게임",
+    "gamefocus.co.kr": "게임포커스", "gameple.co.kr": "게임플",
+    "gametoc.hankyung.com": "게임톡", "etoday.co.kr": "이투데이",
+    "news.mtn.co.kr": "MTN뉴스", "sentv.co.kr": "서울경제TV",
+    "kbs.co.kr": "KBS", "news.kbs.co.kr": "KBS",
+    "mbc.co.kr": "MBC", "imbc.com": "MBC",
+    "sbs.co.kr": "SBS", "news.sbs.co.kr": "SBS",
+    "ytn.co.kr": "YTN", "jtbc.co.kr": "JTBC",
+    "tvchosun.com": "TV조선", "ichannela.com": "채널A",
+    "mbn.co.kr": "MBN", "obs.co.kr": "OBS",
+    "ebs.co.kr": "EBS", "yonhapnewstv.co.kr": "연합뉴스TV",
+    "sportsseoul.com": "스포츠서울", "sports.khan.co.kr": "스포츠경향",
+    "osen.co.kr": "OSEN", "xportsnews.com": "엑스포츠뉴스",
+    "starnews.com": "스타뉴스", "starnewskorea.com": "스타뉴스",
+    "tenasia.co.kr": "텐아시아", "sportalkorea.com": "스포탈코리아",
+    "lawtimes.co.kr": "법률신문", "lec.co.kr": "법률저널",
+    "scourt.go.kr": "대한민국 법원", "labortoday.co.kr": "매일노동뉴스",
     "womennews.co.kr": "여성신문",
-
-    # 수도권 / 강원
-    "incheonilbo.com": "인천일보",
-    "kihoilbo.co.kr": "기호일보",
-    "kgnews.co.kr": "경기신문",
-    "kyeongin.com": "경인일보",
-    "kyeonggi.com": "경기일보",
-    "jeonmae.co.kr": "전국매일신문",
-    "kwnews.co.kr": "강원일보",
-    "kado.net": "강원도민일보",
-
-    # 충청
-    "cctoday.co.kr": "충청투데이",
-    "ccdn.co.kr": "충청일보",
-    "ccdailynews.com": "충청데일리",
-    "daejonilbo.com": "대전일보",
-    "djtimes.co.kr": "대전일보",
-    "ggilbo.com": "금강일보",
-    "jbnews.com": "중부매일",
+    "incheonilbo.com": "인천일보", "kihoilbo.co.kr": "기호일보",
+    "kgnews.co.kr": "경기신문", "kyeongin.com": "경인일보",
+    "kyeonggi.com": "경기일보", "jeonmae.co.kr": "전국매일신문",
+    "kwnews.co.kr": "강원일보", "kado.net": "강원도민일보",
+    "cctoday.co.kr": "충청투데이", "ccdn.co.kr": "충청일보",
+    "daejonilbo.com": "대전일보", "djtimes.co.kr": "대전일보",
+    "ggilbo.com": "금강일보", "jbnews.com": "중부매일",
     "cjb.co.kr": "CJB청주방송",
-
-    # 영남
-    "yeongnam.com": "영남일보",
-    "imaeil.com": "매일신문",
-    "idaegu.co.kr": "대구신문",
-    "kyongbuk.co.kr": "경북일보",
-    "hidomin.com": "경북도민일보",
-    "ksmnews.co.kr": "경상매일신문",
-    "knnews.co.kr": "경남신문",
-    "gnnews.co.kr": "경남일보",
-    "idomin.com": "경남도민일보",
-    "gndomin.com": "경남도민신문",
-    "busan.com": "부산일보",
-    "busanilbo.com": "부산일보",
-    "kookje.co.kr": "국제신문",
-    "ulsanpress.net": "울산신문",
-    "usm.co.kr": "울산매일",
-    "tbc.co.kr": "TBC",
-    "knn.co.kr": "KNN",
-
-    # 호남 / 제주
-    "jnilbo.com": "전남일보",
-    "namdonews.com": "남도일보",
-    "kjdaily.com": "광주매일신문",
-    "mdilbo.com": "무등일보",
-    "jjan.kr": "전북일보",
-    "domin.co.kr": "전북도민일보",
-    "sjbnews.com": "새전북신문",
-    "ihalla.com": "한라일보",
-    "jejunews.com": "제주일보",
-    "headlinejeju.co.kr": "헤드라인제주",
-    "kbc.co.kr": "KBC광주방송",
-    "jtv.co.kr": "JTV전주방송",
+    "yeongnam.com": "영남일보", "imaeil.com": "매일신문",
+    "idaegu.co.kr": "대구신문", "kyongbuk.co.kr": "경북일보",
+    "hidomin.com": "경북도민일보", "ksmnews.co.kr": "경상매일신문",
+    "knnews.co.kr": "경남신문", "gnnews.co.kr": "경남일보",
+    "idomin.com": "경남도민일보", "gndomin.com": "경남도민신문",
+    "busan.com": "부산일보", "busanilbo.com": "부산일보",
+    "kookje.co.kr": "국제신문", "ulsanpress.net": "울산신문",
+    "usm.co.kr": "울산매일", "tbc.co.kr": "TBC", "knn.co.kr": "KNN",
+    "jnilbo.com": "전남일보", "namdonews.com": "남도일보",
+    "kjdaily.com": "광주매일신문", "mdilbo.com": "무등일보",
+    "jjan.kr": "전북일보", "domin.co.kr": "전북도민일보",
+    "sjbnews.com": "새전북신문", "ihalla.com": "한라일보",
+    "jejunews.com": "제주일보", "headlinejeju.co.kr": "헤드라인제주",
+    "kbc.co.kr": "KBC광주방송", "jtv.co.kr": "JTV전주방송",
     "jibs.co.kr": "JIBS",
-
-    # 기타
-    "andongilbo.co.kr": "안동일보",
-    "mirae-biz.com": "미래경제",
+    "andongilbo.co.kr": "안동일보", "mirae-biz.com": "미래경제",
     "pinetree.news": "파인트리뉴스",
 }
 
@@ -242,7 +148,7 @@ def get_press_name(url: str, title: str = "") -> str:
         if domain == key or domain.endswith("." + key) or key in domain:
             return name
 
-    # 구글 뉴스 RSS 제목: "기사 제목 - 언론사명"
+    # 구글 뉴스 RSS 제목 원본(언론사명 포함)으로 추출
     if " - " in title:
         maybe_press = title.rsplit(" - ", 1)[-1].strip()
         if 1 < len(maybe_press) <= 30:
@@ -266,11 +172,8 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
 def get_article_image(url: str, depth=0) -> str | None:
     if not url or not url.startswith("http") or depth > 3:
         return None
-        
     try:
         req = Request(url)
-        # [핵심] 언론사 보안서버를 뚫는 마법의 키: Googlebot으로 완벽 위장
-        # 언론사들은 구글 검색 노출을 위해 Googlebot의 접속은 100% 허용합니다.
         req.add_header("User-Agent", "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
         req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 
@@ -278,42 +181,34 @@ def get_article_image(url: str, depth=0) -> str | None:
             current_url = resp.url
             html = resp.read().decode("utf-8", errors="ignore")
 
-        # 구글 뉴스 리다이렉트(중간 페이지) 우회
         if "news.google.com" in current_url or "news.url.google.com" in current_url:
             m = re.search(r'data-n-au=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
             if not m:
-                # 구글 뉴스가 종종 사용하는 meta refresh 방식도 추적
                 m = re.search(r'<meta\s+http-equiv=["\']refresh["\']\s+content=["\'][^;]+;\s*url=([^"\']+)["\']', html, re.IGNORECASE)
             if not m:
                 m = re.search(r'<a\s+[^>]*href=["\'](http[^"\']+)["\'][^>]*>', html, re.IGNORECASE)
-            
             if m:
                 real_url = m.group(1).replace("&amp;", "&")
                 if real_url and real_url != url:
                     return get_article_image(real_url, depth=depth+1)
 
-        # 메타 태그 추출
         def extract_meta(html_text, meta_name):
             pat1 = rf'<meta\s+[^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\'][^>]*?content\s*=\s*["\']([^"\']+)["\']'
             m = re.search(pat1, html_text, re.IGNORECASE)
             if m: return m.group(1).strip()
-            
             pat2 = rf'<meta\s+[^>]*?content\s*=\s*["\']([^"\']+)["\'][^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\']'
             m = re.search(pat2, html_text, re.IGNORECASE)
             if m: return m.group(1).strip()
             return None
 
         img = extract_meta(html, "og:image") or extract_meta(html, "twitter:image")
-
         if img:
             final_img_url = make_absolute_url(current_url, img)
-            # 구글 자체 아이콘일 경우에만 필터링 (언론사 제공 원본 이미지는 모두 통과)
             if "lh3.googleusercontent.com" in final_img_url or "news.google.com" in final_img_url:
                 return None
             return final_img_url
-
         return None
-    except Exception as e:
+    except Exception:
         return None
 
 def dedupe_articles(articles):
@@ -351,23 +246,19 @@ POLICY_HINTS = [
 ]
 
 def is_relevant_article(keyword, title, desc):
-    raw_text = f"{title} {desc}"
-    text = normalize_text(raw_text)
+    text = normalize_text(f"{title} {desc}")
     kw = normalize_text(keyword)
 
     if kw not in text:
         return False
-
     for bad in KEYWORDS_EXCLUDE:
         if normalize_text(bad) in text:
             return False
-
     if any(sk in kw for sk in STRICT_CONTEXT_KEYWORDS):
         has_platform = any(normalize_text(p) in text for p in KEYWORDS_PLATFORM)
         has_policy = any(normalize_text(p) in text for p in POLICY_HINTS)
         if not (has_platform or has_policy):
             return False
-
     return True
 
 def score_article(keyword, title, desc):
@@ -383,7 +274,6 @@ def score_article(keyword, title, desc):
     for p in KEYWORDS_PLATFORM:
         if normalize_text(p) in text:
             score += 2
-
     for p in POLICY_HINTS:
         if normalize_text(p) in text:
             score += 1
@@ -397,7 +287,6 @@ def score_article(keyword, title, desc):
     for w in strong:
         if normalize_text(w) in title_norm:
             score += 2
-
     return score
 
 
@@ -418,7 +307,7 @@ def fetch_naver_articles(keyword):
 
     articles = []
     for item in data.get("items", []):
-        title = clean_spaces(strip_html(item.get("title", "")))
+        title = clean_spaces(strip_html(item.get("title", "")))   # ← title_raw 없음, title만 사용
         desc = clean_spaces(strip_html(item.get("description", "")))
         link = item.get("originallink") or item.get("link", "")
         pub_str = item.get("pubDate", "")
@@ -434,21 +323,16 @@ def fetch_naver_articles(keyword):
         if not title or not is_relevant_article(keyword, title, desc):
             continue
 
-        press = get_press_name(link, title_raw)
+        press = get_press_name(link, title)   # ← title 사용 (Naver는 언론사명 미포함)
         score = score_article(keyword, title, desc)
         print(f"  [NAVER/{keyword}] ({score}) {title[:50]}...")
 
         image = get_article_image(link)
 
         articles.append({
-            "title": title,
-            "press": press,
-            "link": link,
-            "summary": desc,
-            "date": pub_label,
-            "score": score,
-            "keyword": keyword,
-            "image": image
+            "title": title, "press": press, "link": link,
+            "summary": desc, "date": pub_label,
+            "score": score, "keyword": keyword, "image": image
         })
 
     articles.sort(key=lambda x: x["score"], reverse=True)
@@ -473,20 +357,18 @@ def fetch_google_articles(keyword):
 
         for item in root.findall(".//item")[:10]:
             title_el = item.find("title")
-            link_el = item.find("link")
-            desc_el = item.find("description")
-            pub_el = item.find("pubDate")
+            link_el  = item.find("link")
+            desc_el  = item.find("description")
+            pub_el   = item.find("pubDate")
 
             if not (title_el is not None and link_el is not None and title_el.text):
                 continue
 
+            # Google RSS 제목 형식: "기사 제목 - 언론사명"
             title_raw = clean_spaces(strip_html(title_el.text))
             title = title_raw.rsplit(" - ", 1)[0].strip() if " - " in title_raw else title_raw
-            press = get_press_name(link, title_raw)
-            if " - " in title_raw:
-                title = title_raw.rsplit(" - ", 1)[0].strip()
-            else:
-            title = title_raw
+            press = get_press_name(link_el.text.strip(), title_raw)  # 언론사 추출엔 원본 사용
+
             link = link_el.text.strip()
             desc = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
             pub_str = pub_el.text if pub_el is not None else ""
@@ -502,21 +384,15 @@ def fetch_google_articles(keyword):
             if not title or not is_relevant_article(keyword, title, desc):
                 continue
 
-            press = get_press_name(link, title)
             score = score_article(keyword, title, desc)
             print(f"  [GOOGLE/{keyword}] ({score}) {title[:50]}...")
 
             image = get_article_image(link)
 
             articles.append({
-                "title": title,
-                "press": press,
-                "link": link,
-                "summary": desc,
-                "date": pub_label,
-                "score": score,
-                "keyword": keyword,
-                "image": image
+                "title": title, "press": press, "link": link,
+                "summary": desc, "date": pub_label,
+                "score": score, "keyword": keyword, "image": image
             })
 
         articles.sort(key=lambda x: x["score"], reverse=True)
@@ -555,7 +431,6 @@ def to_bullet_style(text):
         ("밝혔다", ""), ("전했다", ""), ("나타났다", ""), ("보인다", ""),
         ("예정이다", "예정"), ("것이다", ""), ("했으며", ""), ("했고", "")
     ]
-
     for old, new in endings:
         if text.endswith(old):
             text = text[:-len(old)] + new
@@ -608,9 +483,7 @@ def to_html(all_articles):
         for a in articles:
             total_count += 1
             img_url = a.get("image") or ""
-            
-            # [수정됨] 사용자가 원치 않는 아이콘 삭제. 
-            # 이미지가 존재할 때만 이미지 영역(td)을 생성하고, 없을 때는 영역을 아예 날려서 텍스트가 꽉 차게 함
+
             if img_url:
                 safe_img_url = quote(img_url, safe=":/")
                 parsed_img = urlparse(img_url)
@@ -618,8 +491,8 @@ def to_html(all_articles):
                 proxy_url = (
                     f"https://wsrv.nl/?url={safe_img_url}"
                     f"&w=240&h=180&fit=cover"
-                    f"&referer={img_referer}"   # ← 핵심 추가
-                    f"&default=1"               # ← 로드 실패 시 빈 이미지 대신 wsrv.nl 기본 처리
+                    f"&referer={img_referer}"
+                    f"&default=1"
                 )
                 image_td = f'''
                   <td width="130" style="padding:11px 0 11px 12px;background-color:#ffffff;vertical-align:top;">
@@ -627,10 +500,15 @@ def to_html(all_articles):
                          style="width:120px;height:90px;object-fit:cover;border-radius:10px;display:block;background-color:#f8fafc;" alt="">
                   </td>
                 '''
-                text_padding_left = "8px" # 이미지가 있으면 텍스트 좌측 여백을 좁게
+                text_padding_left = "8px"
             else:
                 image_td = ""
-                text_padding_left = "16px" # 이미지가 없으면 텍스트 좌측 여백을 넓게
+                text_padding_left = "16px"
+
+            # summary가 비어 있거나 제목과 동일하면 안내 문구로 대체
+            summary_text = a.get("summary", "")
+            if not summary_text or normalize_text(summary_text) == normalize_text(a["title"]):
+                summary_text = "원문 링크를 확인해주세요."
 
             cards_html += f"""
             <tr>
@@ -649,7 +527,7 @@ def to_html(all_articles):
                           {a['title']}
                         </div>
                         <div style="padding-top:5px;font-size:13.5px;line-height:21px;color:#4b5563;">
-                          {a['summary'] if a.get('summary') and normalize_text(a['summary']) != normalize_text(a['title']) else '원문 링크를 확인해주세요.'}
+                          {summary_text}
                         </div>
                         <div style="padding-top:6px;font-size:12px;line-height:18px;color:#94a3b8;">
                           {a['date']}{' · ' + a['press'] if a.get('press') else ''}
