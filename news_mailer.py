@@ -47,6 +47,17 @@ GOOGLEBOT_UA = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 "
                 "(compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
 
+# ── 봇 차단 도메인 ────────────────────────────────────────────
+BOT_BLOCKED_DOMAINS = {
+    "v.daum.net", "daum.net",
+    "news.nate.com", "nate.com",
+    "naver.com",
+}
+
+def is_blocked_domain(url: str) -> bool:
+    domain = get_domain(url)
+    return any(domain == d or domain.endswith("." + d) for d in BOT_BLOCKED_DOMAINS)
+
 
 # ── 유틸 함수 ───────────────────────────────────────────────
 def strip_html(text):
@@ -169,31 +180,14 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
 
 
-# ── 봇 차단 도메인 (수집 단계에서 제외) ──────────────────────
-BOT_BLOCKED_DOMAINS = {
-    "v.daum.net",       # Kakao - 강력한 봇 차단
-    "daum.net",
-    "news.nate.com",    # Nate - 봇 차단
-    "nate.com",
-    "naver.com",        # 네이버 뉴스 자체 도메인 (API 외 직접 크롤링 불가)
-}
-
-def is_blocked_domain(url: str) -> bool:
-    domain = get_domain(url)
-    return any(domain == d or domain.endswith("." + d) for d in BOT_BLOCKED_DOMAINS)
-
-
 # ── snippet 품질 검증 ─────────────────────────────────────────
 def is_valid_snippet(text: str) -> bool:
     if not text or len(text) < 30:
         return False
-    # Google News 기본 문구
     if "google news" in text.lower():
         return False
-    # 쉼표 6개 이상 → SEO 키워드 나열
     if text.count(",") + text.count("，") >= 6:
         return False
-    # 문장 종결어미 없이 60자 초과 → 슬로건/키워드 목록
     has_sentence_end = bool(re.search(r"[다요죠까네\.!?]", text))
     if not has_sentence_end and len(text) > 60:
         return False
@@ -202,7 +196,6 @@ def is_valid_snippet(text: str) -> bool:
 
 # ── 기사 페이지에서 이미지 + 요약 동시 추출 ──────────────────
 def get_article_info(url: str, depth=0) -> tuple:
-    """(image_url | None, snippet | None) 반환"""
     if not url or not url.startswith("http") or depth > 3:
         return None, None
     try:
@@ -225,8 +218,7 @@ def get_article_info(url: str, depth=0) -> tuple:
                 real_url = m.group(1).replace("&amp;", "&")
                 if real_url and real_url != url:
                     return get_article_info(real_url, depth=depth+1)
-            # 우회 실패 → Google 페이지에 그대로 머묾 → 결과 버림
-            return None, None
+            return None, None  # 우회 실패
 
         def extract_meta(html_text, meta_name):
             pat1 = rf'<meta\s+[^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\'][^>]*?content\s*=\s*["\']([^"\']+)["\']'
@@ -243,7 +235,6 @@ def get_article_info(url: str, depth=0) -> tuple:
         if img_raw:
             final_img = make_absolute_url(current_url, img_raw)
             if "lh3.googleusercontent.com" not in final_img and "news.google.com" not in final_img:
-                # HEAD 요청으로 실제 이미지인지 확인
                 try:
                     img_req = Request(final_img, method="HEAD")
                     img_req.add_header("User-Agent", USER_AGENT)
@@ -358,9 +349,9 @@ def fetch_naver_articles(keyword):
 
     articles = []
     for item in data.get("items", []):
-        title = clean_spaces(strip_html(item.get("title", "")))
-        desc  = clean_spaces(strip_html(item.get("description", "")))
-        link  = item.get("originallink") or item.get("link", "")
+        title   = clean_spaces(strip_html(item.get("title", "")))
+        desc    = clean_spaces(strip_html(item.get("description", "")))
+        link    = item.get("originallink") or item.get("link", "")
         pub_str = item.get("pubDate", "")
 
         try:
@@ -371,12 +362,20 @@ def fetch_naver_articles(keyword):
         except:
             continue
 
-        if not title or is_blocked_domain(link) or not is_relevant_article(keyword, title, desc):
+        if not title:
             continue
+        if is_blocked_domain(link):
+            continue
+        if not is_relevant_article(keyword, title, desc):
+            continue
+
+        press = get_press_name(link, title)
+        score = score_article(keyword, title, desc)
+        print(f"  [NAVER/{keyword}] ({score}) {title[:50]}...")
 
         image, snippet = get_article_info(link)
 
-        # Naver desc가 부실하면 페이지 snippet으로 보완
+        # desc가 부실하면 페이지 snippet으로 보완
         if not desc or normalize_text(desc) == normalize_text(title):
             desc = snippet or ""
 
@@ -422,8 +421,7 @@ def fetch_google_articles(keyword):
             press = get_press_name(link_el.text.strip(), title_raw)
 
             link = link_el.text.strip()
-            # <source url="실제언론사URL"> 에서 직접 URL 추출
-            real_link = source_el.get("url") if source_el is not None else None
+            real_link = source_el.get("url") if source_el is not None else None  # 실제 언론사 URL
 
             desc_raw = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
             pub_str  = pub_el.text if pub_el is not None else ""
@@ -436,13 +434,16 @@ def fetch_google_articles(keyword):
             except:
                 continue
 
-            if not title or is_blocked_domain(real_link or link) or not is_relevant_article(keyword, title, desc_raw):
+            if not title:
+                continue
+            if is_blocked_domain(real_link or link):
+                continue
+            if not is_relevant_article(keyword, title, desc_raw):
                 continue
 
             score = score_article(keyword, title, desc_raw)
             print(f"  [GOOGLE/{keyword}] ({score}) {title[:50]}...")
 
-            # 실제 언론사 URL로 방문 (없으면 Google RSS link 사용)
             image, snippet = get_article_info(real_link or link)
 
             # RSS desc가 제목 반복이면 페이지 snippet으로 대체
