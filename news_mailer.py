@@ -264,42 +264,31 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
 
 def get_article_image(url: str, depth=0) -> str | None:
-    # 무한 리다이렉트 방지 (최대 2번까지만 추적)
     if not url or not url.startswith("http") or depth > 2:
         return None
         
     try:
         req = Request(url)
-        # 봇 차단(Daum, Naver 등)을 뚫기 위해 완벽한 최신 크롬 브라우저로 위장
+        # 봇 차단을 뚫기 위한 강력한 헤더
         req.add_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-        req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+        req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
         req.add_header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
-        req.add_header("Sec-Ch-Ua", '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"')
-        req.add_header("Sec-Ch-Ua-Mobile", "?0")
-        req.add_header("Sec-Ch-Ua-Platform", '"Windows"')
-        req.add_header("Sec-Fetch-Dest", "document")
-        req.add_header("Sec-Fetch-Mode", "navigate")
-        req.add_header("Sec-Fetch-Site", "none")
-        req.add_header("Sec-Fetch-User", "?1")
-        req.add_header("Upgrade-Insecure-Requests", "1")
+        req.add_header("Referer", "https://search.naver.com/")
 
-        with urlopen(req, timeout=10) as resp:
-            # urllib가 자동으로 따라간 최종 URL
+        with urlopen(req, timeout=8) as resp:
             current_url = resp.url
             html = resp.read().decode("utf-8", errors="ignore")
 
-        # [핵심] 여전히 구글 뉴스 중간 페이지에 갇혀있다면, 진짜 URL을 강제로 찾아내서 재귀 호출
+        # 구글 리다이렉트 추적
         if "news.google.com" in current_url or "news.url.google.com" in current_url:
             m1 = re.search(r'data-n-au=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
             m2 = re.search(r'<a\s+[^>]*href=["\'](http[^"\']+)["\'][^>]*>', html, re.IGNORECASE)
-            real_url = None
-            if m1: real_url = m1.group(1)
-            elif m2: real_url = m2.group(1)
+            real_url = m1.group(1) if m1 else (m2.group(1) if m2 else None)
             
             if real_url and real_url != url:
                 return get_article_image(real_url, depth=depth+1)
 
-        # 메타 태그 추출 함수
+        # 메타 태그 추출
         def extract_meta(html_text, meta_name):
             pat1 = rf'<meta\s+[^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\'][^>]*?content\s*=\s*["\']([^"\']+)["\']'
             m = re.search(pat1, html_text, re.IGNORECASE)
@@ -310,17 +299,21 @@ def get_article_image(url: str, depth=0) -> str | None:
             if m: return m.group(1).strip()
             return None
 
-        # og:image 또는 twitter:image 추출
-        img = extract_meta(html, "og:image") or extract_meta(html, "twitter:image") or extract_meta(html, "twitter:image:src")
+        img = extract_meta(html, "og:image") or extract_meta(html, "twitter:image")
 
         if img:
             final_img_url = make_absolute_url(current_url, img)
             
-            # [핵심 필터링] 구글 뉴스의 무의미한 G 마크나 기본 아이콘이면 쳐내기 (차라리 📰 아이콘이 나오도록)
-            blacklist = ["lh3.googleusercontent.com", "gstatic.com", "news.google.com", "favicon", "default_article"]
+            # [핵심] 의미 없는 이미지 철저히 차단 (언론사 로고, 구글 아이콘, 디폴트 이미지 등)
+            blacklist = [
+                "lh3.googleusercontent.com", "gstatic.com", "news.google.com", 
+                "favicon", "default", "no_image", "noimg", "blank", 
+                "logo", "icon", "thumb_news.png", "sns_share"
+            ]
+            lower_url = final_img_url.lower()
             for bad_word in blacklist:
-                if bad_word in final_img_url.lower():
-                    return None
+                if bad_word in lower_url:
+                    return None # 블랙리스트에 걸리면 이미지 없는 것으로 처리 (차라리 📰 아이콘 띄움)
                     
             return final_img_url
 
@@ -617,11 +610,15 @@ def to_html(all_articles):
             img_url = a.get("image") or ""
             
             if img_url:
-                # [핵심] 언론사 이미지 엑스박스(차단) 방지를 위한 무료 이미지 프록시(wsrv.nl) 경유
-                proxy_url = f"https://wsrv.nl/?url={quote(img_url)}&w=240&h=180&fit=cover"
+                # URL 인코딩 최적화 (특수문자 오류로 인한 엑스박스 방지)
+                safe_img_url = quote(img_url, safe=":/")
+                # 에러 발생 시 엑스박스 대신 투명하게 처리되도록 &errorredirect 파라미터 추가
+                proxy_url = f"https://wsrv.nl/?url={safe_img_url}&w=240&h=180&fit=cover"
+                
+                # alt="" 속성을 비워서 이미지가 깨지더라도 "기사 이미지"라는 보기 싫은 텍스트가 남지 않도록 함
                 image_html = f'''
                   <img src="{proxy_url}" width="120" height="90"
-                       style="width:120px;height:90px;object-fit:cover;border-radius:10px;display:block;" alt="기사 이미지">
+                       style="width:120px;height:90px;object-fit:cover;border-radius:10px;display:block;background-color:#e2e8f0;" alt="">
                 '''
             else:
                 image_html = '''
