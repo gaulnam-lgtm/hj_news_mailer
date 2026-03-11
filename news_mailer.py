@@ -622,7 +622,7 @@ def to_html(all_articles):
             <tr><td style="padding:16px 36px 8px 36px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#e8f4fd;border-radius:16px;">
                 <tr><td style="padding:20px 24px;">
-                  <div style="font-size:17px;line-height:26px;font-weight:800;color:#0f172a;margin-bottom:12px;">🔎 이번주 핵심 요약</div>
+                  <div style="font-size:17px;line-height:26px;font-weight:800;color:#0f172a;margin-bottom:12px;">🔎 핵심 요약</div>
                   {summary_html}
                 </td></tr>
               </table>
