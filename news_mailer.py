@@ -364,7 +364,7 @@ def to_html(all_articles):
             <tr><td style="background:linear-gradient(to right,#0f1f3d 0%,#1a3a6b 50%,#1e4d9b 100%);padding:28px 36px;">
               <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">WEEKLY APP MARKET NEWS</div>
               <div style="padding-top:8px;font-size:30px;line-height:38px;color:#ffffff;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
-                📊 이번주 앱마켓 뉴스레터
+                📊 앱마켓 뉴스레터
               </div>
               <div style="padding-top:10px;font-size:15px;line-height:22px;color:#dbeafe;">검색 범위 : {week_ago} ~ {today}</div>
             </td></tr>
@@ -404,7 +404,7 @@ def to_html(all_articles):
 def send_mail(html):
     recipients = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[이번주 앱마켓 뉴스레터] {today}"
+    msg["Subject"] = f"[앱마켓 뉴스레터] {today}"
     msg["From"] = f"{GMAIL_ID}@gmail.com"
     msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(html, "html", "utf-8"))
