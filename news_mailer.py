@@ -621,23 +621,32 @@ def to_html(all_articles):
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
             <tr><td style="background:linear-gradient(to right,#0f1f3d 0%,#1a3a6b 50%,#1e4d9b 100%);padding:28px 36px;">
               <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">WEEKLY APP MARKET NEWS</div>
-              <div style="padding-top:8px;display:flex;align-items:center;gap:10px;">
-                <img src="{ICON_BASE64}"
-                     width="48" height="48"
-                     style="width:48px;height:48px;display:inline-block;vertical-align:middle;"
-                     alt="앱마켓 아이콘">
-                <span style="
-                  font-size:30px;
-                  line-height:38px;
-                  font-weight:800;
-                  font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;
+              <div style="padding-top:8px;">
+                <a style="
+                  display:inline-flex;
+                  align-items:center;
+                  gap:10px;
+                  padding:10px 28px 10px 16px;
+                  border-radius:10px;
                   background-image: linear-gradient(to right, #003973 0%, #E5E5BE 51%, #003973 100%);
                   background-size: 200% auto;
-                  -webkit-background-clip: text;
-                  -webkit-text-fill-color: transparent;
-                  background-clip: text;
-                  color: transparent;
-                ">앱마켓 뉴스 레터</span>
+                  box-shadow: 0 0 20px #00000044;
+                  text-decoration:none;
+                  transition: background-position 0.5s;
+                " onmouseover="this.style.backgroundPosition='right center'"
+                   onmouseout="this.style.backgroundPosition='left center'">
+                  <img src="{ICON_BASE64}"
+                       width="48" height="48"
+                       style="width:48px;height:48px;display:inline-block;vertical-align:middle;"
+                       alt="앱마켓 아이콘">
+                  <span style="
+                    font-size:30px;
+                    line-height:38px;
+                    font-weight:800;
+                    font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;
+                    color:#ffffff;
+                  ">앱마켓 뉴스 레터</span>
+                </a>
               </div>
               <div style="padding-top:10px;font-size:15px;line-height:22px;color:#dbeafe;">검색 범위 : {week_ago} ~ {today}</div>
             </td></tr>
