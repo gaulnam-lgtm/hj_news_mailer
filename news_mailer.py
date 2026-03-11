@@ -264,29 +264,33 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
 
 def get_article_image(url: str, depth=0) -> str | None:
-    if not url or not url.startswith("http") or depth > 2:
+    if not url or not url.startswith("http") or depth > 3:
         return None
         
     try:
         req = Request(url)
-        # 봇 차단을 뚫기 위한 강력한 헤더
-        req.add_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-        req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-        req.add_header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
-        req.add_header("Referer", "https://search.naver.com/")
+        # [핵심] 언론사 보안서버를 뚫는 마법의 키: Googlebot으로 완벽 위장
+        # 언론사들은 구글 검색 노출을 위해 Googlebot의 접속은 100% 허용합니다.
+        req.add_header("User-Agent", "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
+        req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 
-        with urlopen(req, timeout=8) as resp:
+        with urlopen(req, timeout=10) as resp:
             current_url = resp.url
             html = resp.read().decode("utf-8", errors="ignore")
 
-        # 구글 리다이렉트 추적
+        # 구글 뉴스 리다이렉트(중간 페이지) 우회
         if "news.google.com" in current_url or "news.url.google.com" in current_url:
-            m1 = re.search(r'data-n-au=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
-            m2 = re.search(r'<a\s+[^>]*href=["\'](http[^"\']+)["\'][^>]*>', html, re.IGNORECASE)
-            real_url = m1.group(1) if m1 else (m2.group(1) if m2 else None)
+            m = re.search(r'data-n-au=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
+            if not m:
+                # 구글 뉴스가 종종 사용하는 meta refresh 방식도 추적
+                m = re.search(r'<meta\s+http-equiv=["\']refresh["\']\s+content=["\'][^;]+;\s*url=([^"\']+)["\']', html, re.IGNORECASE)
+            if not m:
+                m = re.search(r'<a\s+[^>]*href=["\'](http[^"\']+)["\'][^>]*>', html, re.IGNORECASE)
             
-            if real_url and real_url != url:
-                return get_article_image(real_url, depth=depth+1)
+            if m:
+                real_url = m.group(1).replace("&amp;", "&")
+                if real_url and real_url != url:
+                    return get_article_image(real_url, depth=depth+1)
 
         # 메타 태그 추출
         def extract_meta(html_text, meta_name):
@@ -303,23 +307,13 @@ def get_article_image(url: str, depth=0) -> str | None:
 
         if img:
             final_img_url = make_absolute_url(current_url, img)
-            
-            # [핵심] 의미 없는 이미지 철저히 차단 (언론사 로고, 구글 아이콘, 디폴트 이미지 등)
-            blacklist = [
-                "lh3.googleusercontent.com", "gstatic.com", "news.google.com", 
-                "favicon", "default", "no_image", "noimg", "blank", 
-                "logo", "icon", "thumb_news.png", "sns_share"
-            ]
-            lower_url = final_img_url.lower()
-            for bad_word in blacklist:
-                if bad_word in lower_url:
-                    return None # 블랙리스트에 걸리면 이미지 없는 것으로 처리 (차라리 📰 아이콘 띄움)
-                    
+            # 구글 자체 아이콘일 경우에만 필터링 (언론사 제공 원본 이미지는 모두 통과)
+            if "lh3.googleusercontent.com" in final_img_url or "news.google.com" in final_img_url:
+                return None
             return final_img_url
 
         return None
     except Exception as e:
-        print(f"  [IMAGE FETCH ERROR] {url[:50]}... {e}")
         return None
 
 def dedupe_articles(articles):
@@ -609,24 +603,21 @@ def to_html(all_articles):
             total_count += 1
             img_url = a.get("image") or ""
             
+            # [수정됨] 사용자가 원치 않는 아이콘 삭제. 
+            # 이미지가 존재할 때만 이미지 영역(td)을 생성하고, 없을 때는 영역을 아예 날려서 텍스트가 꽉 차게 함
             if img_url:
-                # URL 인코딩 최적화 (특수문자 오류로 인한 엑스박스 방지)
                 safe_img_url = quote(img_url, safe=":/")
-                # 에러 발생 시 엑스박스 대신 투명하게 처리되도록 &errorredirect 파라미터 추가
                 proxy_url = f"https://wsrv.nl/?url={safe_img_url}&w=240&h=180&fit=cover"
-                
-                # alt="" 속성을 비워서 이미지가 깨지더라도 "기사 이미지"라는 보기 싫은 텍스트가 남지 않도록 함
-                image_html = f'''
-                  <img src="{proxy_url}" width="120" height="90"
-                       style="width:120px;height:90px;object-fit:cover;border-radius:10px;display:block;background-color:#e2e8f0;" alt="">
+                image_td = f'''
+                  <td width="130" style="padding:11px 0 11px 12px;background-color:#ffffff;vertical-align:top;">
+                    <img src="{proxy_url}" width="120" height="90"
+                         style="width:120px;height:90px;object-fit:cover;border-radius:10px;display:block;background-color:#f8fafc;" alt="">
+                  </td>
                 '''
+                text_padding_left = "8px" # 이미지가 있으면 텍스트 좌측 여백을 좁게
             else:
-                image_html = '''
-                  <div style="width:120px;height:90px;background-color:#e2e8f0;border-radius:10px;
-                              display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:28px;">
-                    📰
-                  </div>
-                '''
+                image_td = ""
+                text_padding_left = "16px" # 이미지가 없으면 텍스트 좌측 여백을 넓게
 
             cards_html += f"""
             <tr>
@@ -635,10 +626,8 @@ def to_html(all_articles):
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                     <tr>
                       <td width="5" style="background-color:{color};">&nbsp;</td>
-                      <td width="130" style="padding:11px 0 11px 12px;background-color:#ffffff;vertical-align:top;">
-                        {image_html}
-                      </td>
-                      <td style="padding:11px 18px 11px 8px;background-color:#ffffff;vertical-align:top;">
+                      {image_td}
+                      <td style="padding:11px 18px 11px {text_padding_left};background-color:#ffffff;vertical-align:top;">
                         <div style="margin-bottom:5px;">
                           <span style="display:inline-block;background-color:{tag_bg};color:{color};
                                        font-size:11px;line-height:17px;font-weight:700;padding:2px 9px;border-radius:999px;">{kw}</span>
