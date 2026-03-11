@@ -264,55 +264,69 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
 
 def get_article_image(url: str, depth=0) -> str | None:
-    # 무한 루프 방지를 위해 depth 체크 (리다이렉트는 1번만 허용)
-    if not url or not url.startswith("http") or depth > 1:
+    # 무한 리다이렉트 방지 (최대 2번까지만 추적)
+    if not url or not url.startswith("http") or depth > 2:
         return None
+        
     try:
         req = Request(url)
-        # 봇 차단을 우회하기 위해 브라우저와 최대한 유사한 헤더 세팅
-        req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-        req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+        # 봇 차단(Daum, Naver 등)을 뚫기 위해 완벽한 최신 크롬 브라우저로 위장
+        req.add_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+        req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
         req.add_header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
-        req.add_header("Referer", "https://www.google.com/")
+        req.add_header("Sec-Ch-Ua", '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"')
+        req.add_header("Sec-Ch-Ua-Mobile", "?0")
+        req.add_header("Sec-Ch-Ua-Platform", '"Windows"')
+        req.add_header("Sec-Fetch-Dest", "document")
+        req.add_header("Sec-Fetch-Mode", "navigate")
+        req.add_header("Sec-Fetch-Site", "none")
+        req.add_header("Sec-Fetch-User", "?1")
+        req.add_header("Upgrade-Insecure-Requests", "1")
 
         with urlopen(req, timeout=10) as resp:
-            if resp.getcode() != 200:
-                return None
+            # urllib가 자동으로 따라간 최종 URL
+            current_url = resp.url
             html = resp.read().decode("utf-8", errors="ignore")
 
-        # [핵심] 구글 뉴스 RSS의 리다이렉트 중간 페이지 우회 처리
-        if "news.google.com" in url or "news.url.google.com" in url:
-            m = re.search(r'data-n-au=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
-            if not m:
-                m = re.search(r'<a\s+[^>]*href=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
-            if m:
-                real_url = m.group(1)
-                return get_article_image(real_url, depth=depth+1) # 실제 기사 URL로 재요청
+        # [핵심] 여전히 구글 뉴스 중간 페이지에 갇혀있다면, 진짜 URL을 강제로 찾아내서 재귀 호출
+        if "news.google.com" in current_url or "news.url.google.com" in current_url:
+            m1 = re.search(r'data-n-au=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
+            m2 = re.search(r'<a\s+[^>]*href=["\'](http[^"\']+)["\'][^>]*>', html, re.IGNORECASE)
+            real_url = None
+            if m1: real_url = m1.group(1)
+            elif m2: real_url = m2.group(1)
+            
+            if real_url and real_url != url:
+                return get_article_image(real_url, depth=depth+1)
 
-        # ==================== 개선된 메타 추출 ====================
-        def extract_meta(html, meta_name):
+        # 메타 태그 추출 함수
+        def extract_meta(html_text, meta_name):
             pat1 = rf'<meta\s+[^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\'][^>]*?content\s*=\s*["\']([^"\']+)["\']'
-            m = re.search(pat1, html, re.IGNORECASE)
+            m = re.search(pat1, html_text, re.IGNORECASE)
             if m: return m.group(1).strip()
             
             pat2 = rf'<meta\s+[^>]*?content\s*=\s*["\']([^"\']+)["\'][^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\']'
-            m = re.search(pat2, html, re.IGNORECASE)
+            m = re.search(pat2, html_text, re.IGNORECASE)
             if m: return m.group(1).strip()
             return None
 
-        # og:image, twitter:image 등 순차 탐색
-        img = extract_meta(html, "og:image")
-        if not img:
-            img = extract_meta(html, "twitter:image")
-        if not img:
-            img = extract_meta(html, "twitter:image:src")
+        # og:image 또는 twitter:image 추출
+        img = extract_meta(html, "og:image") or extract_meta(html, "twitter:image") or extract_meta(html, "twitter:image:src")
 
         if img:
-            return make_absolute_url(url, img)
+            final_img_url = make_absolute_url(current_url, img)
+            
+            # [핵심 필터링] 구글 뉴스의 무의미한 G 마크나 기본 아이콘이면 쳐내기 (차라리 📰 아이콘이 나오도록)
+            blacklist = ["lh3.googleusercontent.com", "gstatic.com", "news.google.com", "favicon", "default_article"]
+            for bad_word in blacklist:
+                if bad_word in final_img_url.lower():
+                    return None
+                    
+            return final_img_url
 
         return None
     except Exception as e:
-        print(f"  [IMAGE FETCH ERROR] {url[:60]}... {e}")
+        print(f"  [IMAGE FETCH ERROR] {url[:50]}... {e}")
         return None
 
 def dedupe_articles(articles):
