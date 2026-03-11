@@ -43,6 +43,9 @@ week_ago_dt = today_dt - timedelta(days=7)
 week_ago = week_ago_dt.strftime("%Y년 %m월 %d일")
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+GOOGLEBOT_UA = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 "
+                "(compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
 
 
 # ── 유틸 함수 ───────────────────────────────────────────────
@@ -143,16 +146,13 @@ PRESS_MAP = {
 def get_press_name(url: str, title: str = "") -> str:
     domain = get_domain(url)
     title = clean_spaces(strip_html(title or ""))
-
     for key, name in PRESS_MAP.items():
         if domain == key or domain.endswith("." + key) or key in domain:
             return name
-
     if " - " in title:
         maybe_press = title.rsplit(" - ", 1)[-1].strip()
         if 1 < len(maybe_press) <= 30:
             return maybe_press
-
     return domain
 
 def make_absolute_url(base_url: str, img_url: str) -> str:
@@ -169,17 +169,31 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
 
 
+# ── snippet 품질 검증 ─────────────────────────────────────────
+def is_valid_snippet(text: str) -> bool:
+    if not text or len(text) < 30:
+        return False
+    # Google News 기본 문구
+    if "google news" in text.lower():
+        return False
+    # 쉼표 6개 이상 → SEO 키워드 나열
+    if text.count(",") + text.count("，") >= 6:
+        return False
+    # 문장 종결어미 없이 60자 초과 → 슬로건/키워드 목록
+    has_sentence_end = bool(re.search(r"[다요죠까네\.!?]", text))
+    if not has_sentence_end and len(text) > 60:
+        return False
+    return True
+
+
 # ── 기사 페이지에서 이미지 + 요약 동시 추출 ──────────────────
-# 기존 get_article_image() 대체: 페이지를 한 번만 방문해서 둘 다 가져옴
 def get_article_info(url: str, depth=0) -> tuple:
     """(image_url | None, snippet | None) 반환"""
     if not url or not url.startswith("http") or depth > 3:
         return None, None
     try:
         req = Request(url)
-        req.add_header("User-Agent", "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 "
-            "(compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
+        req.add_header("User-Agent", GOOGLEBOT_UA)
         req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 
         with urlopen(req, timeout=10) as resp:
@@ -197,6 +211,8 @@ def get_article_info(url: str, depth=0) -> tuple:
                 real_url = m.group(1).replace("&amp;", "&")
                 if real_url and real_url != url:
                     return get_article_info(real_url, depth=depth+1)
+            # 우회 실패 → Google 페이지에 그대로 머묾 → 결과 버림
+            return None, None
 
         def extract_meta(html_text, meta_name):
             pat1 = rf'<meta\s+[^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\'][^>]*?content\s*=\s*["\']([^"\']+)["\']'
@@ -213,35 +229,26 @@ def get_article_info(url: str, depth=0) -> tuple:
         if img_raw:
             final_img = make_absolute_url(current_url, img_raw)
             if "lh3.googleusercontent.com" not in final_img and "news.google.com" not in final_img:
-                image = final_img
+                # HEAD 요청으로 실제 이미지인지 확인
+                try:
+                    img_req = Request(final_img, method="HEAD")
+                    img_req.add_header("User-Agent", USER_AGENT)
+                    img_req.add_header("Referer", f"{urlparse(final_img).scheme}://{urlparse(final_img).netloc}/")
+                    with urlopen(img_req, timeout=5) as img_resp:
+                        if "image" in img_resp.headers.get("Content-Type", ""):
+                            image = final_img
+                except Exception:
+                    pass
 
-        # 요약 추출 (og:description → twitter:description → description 순)
+        # 요약 추출
         snippet_raw = (
             extract_meta(html, "og:description")
             or extract_meta(html, "twitter:description")
             or extract_meta(html, "description")
         )
         snippet = clean_spaces(snippet_raw) if snippet_raw else None
-
-        # 리다이렉트 우회 실패 → 여전히 Google News 페이지에 머물러 있으면 결과 버림
-        if "news.google.com" in current_url:
-            return None, None
-
         if snippet and not is_valid_snippet(snippet):
             snippet = None
-
-        # 이미지 URL 유효성 검증: HEAD 요청으로 실제 이미지인지 확인
-        if image:
-            try:
-                img_req = Request(image, method="HEAD")
-                img_req.add_header("User-Agent", USER_AGENT)
-                img_req.add_header("Referer", f"{urlparse(image).scheme}://{urlparse(image).netloc}/")
-                with urlopen(img_req, timeout=5) as img_resp:
-                    content_type = img_resp.headers.get("Content-Type", "")
-                    if "image" not in content_type:
-                        image = None
-            except Exception:
-                image = None
 
         return image, snippet
 
@@ -249,24 +256,8 @@ def get_article_info(url: str, depth=0) -> tuple:
         return None, None
 
 
-def is_valid_snippet(text: str) -> bool:
-    """기사 요약으로 쓸 수 있는 품질인지 검증"""
-    if not text or len(text) < 30:
-        return False
-    # Google News 기본 문구
-    if "google news" in text.lower():
-        return False
-    # 쉼표가 6개 이상 → SEO 키워드 나열 (뉴스토마토 등)
-    if text.count(",") + text.count("，") >= 6:
-        return False
-    # 문장 종결어미 없이 100자 이상 → 슬로건/키워드 목록
-    has_sentence_end = bool(re.search(r"[다요죠까네\.!?]", text))
-    if not has_sentence_end and len(text) > 60:
-        return False
-    return True
-
-
-
+# ── 중복 제거 ─────────────────────────────────────────────────
+def dedupe_articles(articles):
     seen = set()
     result = []
     for article in articles:
@@ -375,7 +366,7 @@ def fetch_naver_articles(keyword):
 
         image, snippet = get_article_info(link)
 
-        # desc가 비어 있거나 제목과 같으면 페이지에서 추출한 snippet으로 보완
+        # Naver desc가 부실하면 페이지 snippet으로 보완
         if not desc or normalize_text(desc) == normalize_text(title):
             desc = snippet or ""
 
@@ -406,26 +397,24 @@ def fetch_google_articles(keyword):
         articles = []
 
         for item in root.findall(".//item")[:10]:
-            title_el = item.find("title")
-            link_el  = item.find("link")
-            desc_el  = item.find("description")
-            pub_el   = item.find("pubDate")
+            title_el  = item.find("title")
+            link_el   = item.find("link")
+            desc_el   = item.find("description")
+            pub_el    = item.find("pubDate")
+            source_el = item.find("source")
 
             if not (title_el is not None and link_el is not None and title_el.text):
                 continue
 
-            # Google RSS 제목: "기사 제목 - 언론사명" → 언론사명 분리
+            # Google RSS 제목: "기사 제목 - 언론사명" → 분리
             title_raw = clean_spaces(strip_html(title_el.text))
             title = title_raw.rsplit(" - ", 1)[0].strip() if " - " in title_raw else title_raw
-            press = get_press_name(link_el.text.strip(), title_raw)  # 언론사 추출엔 원본 사용
+            press = get_press_name(link_el.text.strip(), title_raw)
 
             link = link_el.text.strip()
-
-            # <source url="실제기사URL"> 에서 언론사 직접 URL 추출 → 페이지 방문에 사용
-            source_el = item.find("source")
+            # <source url="실제언론사URL"> 에서 직접 URL 추출
             real_link = source_el.get("url") if source_el is not None else None
 
-            # Google RSS desc는 보통 "제목 언론사명" 반복 → 그대로 두고 아래에서 snippet으로 대체
             desc_raw = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
             pub_str  = pub_el.text if pub_el is not None else ""
 
@@ -565,7 +554,6 @@ def to_html(all_articles):
                 image_td = ""
                 text_padding_left = "16px"
 
-            # summary가 없거나 제목과 동일하면 안내 문구
             summary_text = a.get("summary", "")
             if not summary_text or normalize_text(summary_text) == normalize_text(a["title"]):
                 summary_text = "원문 링크를 확인해주세요."
@@ -611,7 +599,7 @@ def to_html(all_articles):
     <html><body style="margin:0;padding:0;background-color:#f3f6fb;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#1f2937;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f6fb;">
         <tr><td align="center" style="padding:32px 16px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:1000px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
             <tr><td style="background:linear-gradient(to right,#0f1f3d 0%,#1a3a6b 50%,#1e4d9b 100%);padding:28px 36px;">
               <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">WEEKLY APP MARKET NEWS</div>
               <div style="padding-top:8px;font-size:30px;line-height:38px;color:#ffffff;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">📊 앱마켓 뉴스 레터</div>
