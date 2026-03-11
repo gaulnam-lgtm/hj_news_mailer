@@ -607,7 +607,14 @@ def to_html(all_articles):
             # 이미지가 존재할 때만 이미지 영역(td)을 생성하고, 없을 때는 영역을 아예 날려서 텍스트가 꽉 차게 함
             if img_url:
                 safe_img_url = quote(img_url, safe=":/")
-                proxy_url = f"https://wsrv.nl/?url={safe_img_url}&w=240&h=180&fit=cover"
+                parsed_img = urlparse(img_url)
+                img_referer = quote(f"{parsed_img.scheme}://{parsed_img.netloc}/", safe="")
+                proxy_url = (
+                    f"https://wsrv.nl/?url={safe_img_url}"
+                    f"&w=240&h=180&fit=cover"
+                    f"&referer={img_referer}"   # ← 핵심 추가
+                    f"&default=1"               # ← 로드 실패 시 빈 이미지 대신 wsrv.nl 기본 처리
+                )
                 image_td = f'''
                   <td width="130" style="padding:11px 0 11px 12px;background-color:#ffffff;vertical-align:top;">
                     <img src="{proxy_url}" width="120" height="90"
