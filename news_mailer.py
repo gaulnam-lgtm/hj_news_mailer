@@ -630,17 +630,102 @@ def to_html(all_articles):
         <tr><td align="center" style="padding:32px 16px;">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
 
-            <!-- ── 헤더 (padding 21px: 원본의 3/4) ── -->
-            <tr><td style="background:linear-gradient(to right,#1D2B64 0%,#F8CDDA 51%,#1D2B64 100%);background-size:200% auto;padding:21px 36px;">
-              <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">WEEKLY APP MARKET NEWS</div>
-              <div style="padding-top:8px;">
-                <img src="{ICON_BASE64}"
-                     width="48" height="48"
-                     style="width:48px;height:48px;display:inline-block;vertical-align:middle;"
-                     alt="앱마켓 아이콘">
-                <span style="font-size:30px;line-height:38px;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#ffffff;vertical-align:middle;margin-left:10px;">앱 마켓 뉴스 레터</span>
-              </div>
-              <div style="padding-top:10px;font-size:15px;line-height:22px;color:#dbeafe;">검색 범위 : {week_ago} ~ {today}</div>
+            <!-- ── 헤더 SVG 배너 ── -->
+            <tr><td style="line-height:0;font-size:0;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="900" height="158" viewBox="0 0 620 210" style="display:block;width:100%;height:auto;">
+                <defs>
+                  <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#0f0c29"/>
+                    <stop offset="50%" stop-color="#302b63"/>
+                    <stop offset="100%" stop-color="#1a1a4e"/>
+                  </linearGradient>
+                  <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#93c5fd"/>
+                    <stop offset="50%" stop-color="#c4b5fd"/>
+                    <stop offset="100%" stop-color="#f0abfc"/>
+                  </linearGradient>
+                  <linearGradient id="glowBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#6366f1" stop-opacity="0.5"/>
+                    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+                  </linearGradient>
+                  <linearGradient id="glowPink" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#a855f7" stop-opacity="0.45"/>
+                    <stop offset="100%" stop-color="#ec4899" stop-opacity="0"/>
+                  </linearGradient>
+                  <linearGradient id="phoneBody" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#2d2d5e"/>
+                    <stop offset="100%" stop-color="#1a1a3a"/>
+                  </linearGradient>
+                  <linearGradient id="screenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#0d1230"/>
+                    <stop offset="100%" stop-color="#0a0a1f"/>
+                  </linearGradient>
+                  <filter id="softBlur"><feGaussianBlur stdDeviation="28"/></filter>
+                  <filter id="iconShadow"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="rgba(0,0,0,0.35)"/></filter>
+                </defs>
+                <!-- 배경 -->
+                <rect width="620" height="210" fill="url(#bgGrad)"/>
+                <!-- 글로우 원 -->
+                <circle cx="80"  cy="60"  r="110" fill="url(#glowBlue)" filter="url(#softBlur)"/>
+                <circle cx="560" cy="40"  r="90"  fill="#00d4ff" fill-opacity="0.18" filter="url(#softBlur)"/>
+                <circle cx="300" cy="180" r="80"  fill="url(#glowPink)" filter="url(#softBlur)"/>
+                <!-- 별 -->
+                <circle cx="30"  cy="20"  r="1.2" fill="white" fill-opacity="0.9"/>
+                <circle cx="80"  cy="45"  r="0.8" fill="white" fill-opacity="0.6"/>
+                <circle cx="150" cy="15"  r="1.5" fill="white" fill-opacity="0.8"/>
+                <circle cx="220" cy="55"  r="0.9" fill="white" fill-opacity="0.5"/>
+                <circle cx="310" cy="25"  r="1.2" fill="white" fill-opacity="0.7"/>
+                <circle cx="400" cy="10"  r="1.0" fill="white" fill-opacity="0.6"/>
+                <circle cx="460" cy="50"  r="1.5" fill="white" fill-opacity="0.5"/>
+                <circle cx="40"  cy="140" r="0.9" fill="white" fill-opacity="0.4"/>
+                <circle cx="120" cy="170" r="1.2" fill="white" fill-opacity="0.6"/>
+                <circle cx="200" cy="130" r="0.8" fill="white" fill-opacity="0.5"/>
+                <circle cx="270" cy="175" r="1.0" fill="white" fill-opacity="0.7"/>
+                <circle cx="350" cy="155" r="0.8" fill="white" fill-opacity="0.4"/>
+                <!-- 데이터 라인 -->
+                <line x1="0" y1="85"  x2="400" y2="85"  stroke="rgba(120,200,255,0.12)" stroke-width="1"/>
+                <line x1="0" y1="130" x2="350" y2="130" stroke="rgba(120,200,255,0.08)" stroke-width="1"/>
+                <!-- 점선 원형 데코 -->
+                <circle cx="500" cy="160" r="60" fill="none" stroke="rgba(150,180,255,0.1)" stroke-width="1" stroke-dasharray="4 6"/>
+                <circle cx="500" cy="160" r="42" fill="none" stroke="rgba(150,180,255,0.07)" stroke-width="1" stroke-dasharray="2 5"/>
+                <!-- 스마트폰 -->
+                <rect x="448" y="18" width="82" height="170" rx="14" fill="url(#phoneBody)" stroke="rgba(140,170,255,0.45)" stroke-width="1.5" filter="url(#iconShadow)"/>
+                <rect x="456" y="32" width="66" height="132" rx="6" fill="url(#screenGrad)"/>
+                <rect x="472" y="28" width="34" height="6" rx="3" fill="#0d1230"/>
+                <circle cx="489" cy="175" r="5" fill="rgba(140,170,255,0.25)" stroke="rgba(140,170,255,0.4)" stroke-width="1"/>
+                <!-- 앱 아이콘 3x3 -->
+                <rect x="462" y="40" width="16" height="16" rx="4" fill="#6366f1"/>
+                <rect x="482" y="40" width="16" height="16" rx="4" fill="#10b981"/>
+                <rect x="502" y="40" width="16" height="16" rx="4" fill="#f59e0b"/>
+                <rect x="462" y="62" width="16" height="16" rx="4" fill="#ef4444"/>
+                <rect x="482" y="62" width="16" height="16" rx="4" fill="#8b5cf6"/>
+                <rect x="502" y="62" width="16" height="16" rx="4" fill="#06b6d4"/>
+                <rect x="462" y="84" width="16" height="16" rx="4" fill="#ec4899"/>
+                <rect x="482" y="84" width="16" height="16" rx="4" fill="#f97316"/>
+                <rect x="502" y="84" width="16" height="16" rx="4" fill="#14b8a6"/>
+                <!-- 화면 하단 바 -->
+                <rect x="462" y="108" width="57" height="7" rx="3.5" fill="rgba(120,160,255,0.2)"/>
+                <rect x="462" y="120" width="38" height="7" rx="3.5" fill="rgba(120,160,255,0.15)"/>
+                <rect x="462" y="132" width="48" height="7" rx="3.5" fill="rgba(120,160,255,0.1)"/>
+                <!-- 독 -->
+                <rect x="456" y="148" width="66" height="1" fill="rgba(140,170,255,0.15)"/>
+                <rect x="462" y="152" width="12" height="12" rx="3" fill="#6366f1" fill-opacity="0.7"/>
+                <rect x="479" y="152" width="12" height="12" rx="3" fill="#10b981" fill-opacity="0.7"/>
+                <rect x="496" y="152" width="12" height="12" rx="3" fill="#ef4444" fill-opacity="0.7"/>
+                <!-- 플로팅 카드: App Store -->
+                <rect x="390" y="28" width="44" height="38" rx="9" fill="rgba(99,102,241,0.85)" filter="url(#iconShadow)"/>
+                <text x="412" y="52" text-anchor="middle" font-size="18" fill="white">&#128241;</text>
+                <text x="412" y="62" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.8)" font-family="Arial,sans-serif">App Store</text>
+                <!-- 플로팅 카드: Play Store -->
+                <rect x="384" y="145" width="44" height="38" rx="9" fill="rgba(16,185,129,0.85)" filter="url(#iconShadow)"/>
+                <text x="406" y="166" text-anchor="middle" font-size="16" fill="white">&#9654;</text>
+                <text x="406" y="177" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.8)" font-family="Arial,sans-serif">Play Store</text>
+                <!-- 헤더 텍스트 -->
+                <text x="36" y="72" font-size="10" font-weight="700" fill="rgba(160,210,255,0.8)" letter-spacing="3" font-family="Arial,sans-serif">&#128225;  WEEKLY APP MARKET NEWS</text>
+                <text x="36" y="108" font-size="30" font-weight="900" fill="white" font-family="Arial,sans-serif">&#xC571; &#xB9C8;&#xCF13;</text>
+                <text x="36" y="144" font-size="30" font-weight="900" font-family="Arial,sans-serif" fill="url(#titleGrad)">&#xB274;&#xC2A4;&#xB808;&#xD130;</text>
+                <text x="36" y="170" font-size="11.5" fill="rgba(180,215,255,0.7)" font-family="Arial,sans-serif">&#9679; &#xAC80;&#xC0C9; &#xBC94;&#xC704; : {week_ago} ~ {today}</text>
+              </svg>
             </td></tr>
 
             <!-- ── 통계 바 (padding 7px: 원본의 2/3) ── -->
