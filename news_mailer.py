@@ -668,8 +668,8 @@ def to_html(all_articles):
 <body style="margin:0;padding:0;background-color:#eef0f7;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#1f2937;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#eef0f7;">
 <tr><td align="center" style="padding:28px 12px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="620"
-       style="max-width:620px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.10);">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="900"
+       style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.10);">
 
   <!-- ══ 헤더: 글로우 그라데이션 + 폰 목업 (이메일 호환) ══ -->
   <tr>
