@@ -43,12 +43,20 @@ today = today_dt.strftime("%Y년 %m월 %d일")
 week_ago_dt = today_dt - timedelta(days=7)
 week_ago = week_ago_dt.strftime("%Y년 %m월 %d일")
 
+# ── 주차 레이블 (X월 X째주) ──────────────────────────────────
+def get_week_label(dt):
+    week_num = (dt.day - 1) // 7 + 1
+    korean_nums = ["첫", "둘", "셋", "넷", "다섯"]
+    return f"{dt.month}월 {korean_nums[min(week_num - 1, 4)]}째주"
+
+week_label = get_week_label(today_dt)
+
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
 GOOGLEBOT_UA = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 "
                 "(compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
 
-# ── 아이콘 Base64 ───────────────────────────────────────────  ← 여기에 삽입!
+# ── 아이콘 Base64 ────────────────────────────────────────────
 import base64
 ICON_PATH = "icon.png"
 with open(ICON_PATH, "rb") as f:
@@ -215,7 +223,6 @@ def get_article_info(url: str, depth=0) -> tuple:
             current_url = resp.url
             html = resp.read().decode("utf-8", errors="ignore")
 
-        # 구글 뉴스 리다이렉트 우회
         if "news.google.com" in current_url or "news.url.google.com" in current_url:
             m = re.search(r'data-n-au=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
             if not m:
@@ -226,7 +233,7 @@ def get_article_info(url: str, depth=0) -> tuple:
                 real_url = m.group(1).replace("&amp;", "&")
                 if real_url and real_url != url:
                     return get_article_info(real_url, depth=depth+1)
-            return None, None  # 우회 실패
+            return None, None
 
         def extract_meta(html_text, meta_name):
             pat1 = rf'<meta\s+[^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\'][^>]*?content\s*=\s*["\']([^"\']+)["\']'
@@ -237,7 +244,6 @@ def get_article_info(url: str, depth=0) -> tuple:
             if m: return m.group(1).strip()
             return None
 
-        # 이미지 추출
         img_raw = extract_meta(html, "og:image") or extract_meta(html, "twitter:image")
         image = None
         if img_raw:
@@ -253,7 +259,6 @@ def get_article_info(url: str, depth=0) -> tuple:
                 except Exception:
                     pass
 
-        # 요약 추출
         snippet_raw = (
             extract_meta(html, "og:description")
             or extract_meta(html, "twitter:description")
@@ -383,7 +388,6 @@ def fetch_naver_articles(keyword):
 
         image, snippet = get_article_info(link)
 
-        # desc가 부실하면 페이지 snippet으로 보완
         if not desc or normalize_text(desc) == normalize_text(title):
             desc = snippet or ""
 
@@ -423,13 +427,12 @@ def fetch_google_articles(keyword):
             if not (title_el is not None and link_el is not None and title_el.text):
                 continue
 
-            # Google RSS 제목: "기사 제목 - 언론사명" → 분리
             title_raw = clean_spaces(strip_html(title_el.text))
             title = title_raw.rsplit(" - ", 1)[0].strip() if " - " in title_raw else title_raw
             press = get_press_name(link_el.text.strip(), title_raw)
 
             link = link_el.text.strip()
-            real_link = source_el.get("url") if source_el is not None else None  # 실제 언론사 URL
+            real_link = source_el.get("url") if source_el is not None else None
 
             desc_raw = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
             pub_str  = pub_el.text if pub_el is not None else ""
@@ -454,7 +457,6 @@ def fetch_google_articles(keyword):
 
             image, snippet = get_article_info(real_link or link)
 
-            # RSS desc가 제목 반복이면 페이지 snippet으로 대체
             desc = desc_raw
             if not desc or normalize_text(desc).startswith(normalize_text(title)):
                 desc = snippet or ""
@@ -547,6 +549,10 @@ def to_html(all_articles):
     palette = ["#4f46e5", "#db2777", "#d97706", "#059669", "#2563eb", "#dc2626", "#7c3aed", "#0891b2"]
     kw_colors = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
 
+    # 통계 바용 카운트
+    article_count = sum(len(v) for v in all_articles.values())
+    issue_count   = len(all_articles)
+
     cards_html = ""
     total_count = 0
     for kw, articles in all_articles.items():
@@ -623,20 +629,44 @@ def to_html(all_articles):
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#EEF0F9;">
         <tr><td align="center" style="padding:32px 16px;">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
-            <tr><td style="background:linear-gradient(to right,#1D2B64 0%,#F8CDDA 51%,#1D2B64 100%);background-size:200% auto;padding:28px 36px;">
+
+            <!-- ── 헤더 (padding 21px: 원본의 3/4) ── -->
+            <tr><td style="background:linear-gradient(to right,#1D2B64 0%,#F8CDDA 51%,#1D2B64 100%);background-size:200% auto;padding:21px 36px;">
               <div style="font-size:14px;line-height:20px;color:#a9c3ff;font-weight:700;letter-spacing:0.4px;">WEEKLY APP MARKET NEWS</div>
-              <div style="padding-top:8px;display:flex;align-items:center;gap:10px;">
+              <div style="padding-top:8px;">
                 <img src="{ICON_BASE64}"
                      width="48" height="48"
                      style="width:48px;height:48px;display:inline-block;vertical-align:middle;"
                      alt="앱마켓 아이콘">
-                <span style="font-size:30px;line-height:38px;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#ffffff;">앱 마켓 뉴스 레터</span>
+                <span style="font-size:30px;line-height:38px;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#ffffff;vertical-align:middle;margin-left:10px;">앱 마켓 뉴스 레터</span>
               </div>
               <div style="padding-top:10px;font-size:15px;line-height:22px;color:#dbeafe;">검색 범위 : {week_ago} ~ {today}</div>
             </td></tr>
 
+            <!-- ── 통계 바 (padding 7px: 원본의 2/3) ── -->
+            <tr><td style="background:#1e1e42;padding:7px 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td style="text-align:center;padding:3px 0;border-right:1px solid rgba(255,255,255,0.08);">
+                    <div style="font-size:15px;font-weight:700;color:#93c5fd;">{article_count}</div>
+                    <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">주요 기사</div>
+                  </td>
+                  <td style="text-align:center;padding:3px 0;border-right:1px solid rgba(255,255,255,0.08);">
+                    <div style="font-size:15px;font-weight:700;color:#93c5fd;">{issue_count}</div>
+                    <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">핵심 이슈</div>
+                  </td>
+                  <td style="text-align:center;padding:3px 0;">
+                    <div style="font-size:15px;font-weight:700;color:#93c5fd;">{week_label}</div>
+                    <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">이번 주 호</div>
+                  </td>
+                </tr>
+              </table>
+            </td></tr>
+
+            <!-- ── 인사말 ── -->
             <tr><td style="padding:24px 36px 8px 36px;font-size:15px;line-height:24px;color:#475569;">안녕하세요.<br>이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.</td></tr>
 
+            <!-- ── 핵심 요약 ── -->
             <tr><td style="padding:16px 36px 8px 36px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F9ECF1;border-radius:16px;">
                 <tr><td style="padding:20px 24px;">
@@ -646,13 +676,22 @@ def to_html(all_articles):
               </table>
             </td></tr>
 
+            <!-- ── 주요 기사 ── -->
             <tr><td style="padding:24px 36px 12px 36px;">
               <div style="font-size:22px;line-height:30px;font-weight:800;color:#0f172a;">📰 주요 기사</div>
             </td></tr>
 
             {cards_html if total_count > 0 else empty_html}
 
-            <tr><td style="border-top:1px solid #e5e7eb;padding:20px 36px 28px 36px;font-size:13px;line-height:22px;color:#94a3b8;">자동 발송 · {today}</td></tr>
+            <!-- ── 다크 푸터 (padding 18px: 원본의 4/5) ── -->
+            <tr><td style="background:linear-gradient(135deg,#1a1a3e,#302b63);padding:18px 32px;text-align:center;">
+              <div style="font-size:15px;font-weight:900;color:#fff;margin-bottom:6px;">📱 앱 마켓 <span style="color:#a78bfa;">뉴스레터</span></div>
+              <div style="font-size:11px;color:rgba(180,200,240,0.65);line-height:1.9;">
+                매주 월요일 발행 · 구독 문의: hj@kisa.or.kr<br>
+                자동 발송 · {today}
+              </div>
+            </td></tr>
+
           </table>
         </td></tr>
       </table>
