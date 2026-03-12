@@ -684,39 +684,40 @@ def to_html(all_articles):
           <!-- 좌측 텍스트 -->
           <td style="padding:28px 0 24px 32px;vertical-align:middle;">
             <!-- 라벨 -->
-            <div style="font-size:10px;font-weight:700;letter-spacing:3px;
+            <div style="font-size:13px;font-weight:800;letter-spacing:3px;
                         color:rgba(147,197,253,0.85);margin-bottom:14px;
                         font-family:Arial,sans-serif;">
               &#128225;&nbsp;&nbsp;WEEKLY APP MARKET NEWS
             </div>
-            <!-- 제목: 한 줄, 앱마켓 흰색 + 뉴스레터 그라데이션 -->
-            <div style="margin-bottom:13px;line-height:1.15;
+            <!-- 제목: 주간 + 앱 마켓 뉴스레터 (그라데이션) -->
+            <div style="margin-bottom:13px;line-height:1.1;
                         font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;
                         white-space:nowrap;">
-              <span style="font-size:34px;font-weight:900;color:#ffffff;">앱 마켓&nbsp;</span><span
-                    style="font-size:34px;font-weight:900;color:#93c5fd;">뉴</span><span
-                    style="font-size:34px;font-weight:900;color:#a78bfa;">스</span><span
-                    style="font-size:34px;font-weight:900;color:#c084fc;">레</span><span
-                    style="font-size:34px;font-weight:900;color:#f0abfc;">터</span>
+              <span style="font-size:40px;font-weight:900;color:#ffffff;">주간&nbsp;</span>
+              <span style="font-size:40px;font-weight:900;color:#93c5fd;">앱 마켓&nbsp;</span>
+              <span style="font-size:40px;font-weight:900;color:#a78bfa;">뉴</span>
+              <span style="font-size:40px;font-weight:900;color:#c084fc;">스</span>
+              <span style="font-size:40px;font-weight:900;color:#f0abfc;">레</span>
+              <span style="font-size:40px;font-weight:900;color:#f0abfc;">터</span>
             </div>
             <!-- 날짜 -->
-            <div style="font-size:12px;color:rgba(180,215,255,0.75);
+            <div style="font-size:14px;color:rgba(180,215,255,0.75);
                         font-family:Arial,sans-serif;">
               &#9679; 검색 범위 : {week_ago} ~ {today}
             </div>
           </td>
 
           <!-- 우측 폰 목업 -->
-          <td style="padding:18px 10px 18px 8px;vertical-align:middle;text-align:center;width:200px;">
+          <td style="padding:18px 10px 18px 8px;vertical-align:middle;text-align:center;width:240px;">
             <table role="presentation" cellpadding="0" cellspacing="8" border="0" width="100%" style="margin:0 auto;">
               <tr>
-                <!-- 좌측: App Store + Play Store (정사각형 + 라운드 모서리, 아이콘 위에 글자) -->
-                <td style="width:88px;vertical-align:top;padding-right:12px;">
-                  <!-- App Store 정사각형 -->
+                <!-- 좌측: App Store + Play Store (2/3 크기 정사각형) -->
+                <td style="width:65px;vertical-align:top;padding-right:8px;">
+                  <!-- App Store 정사각형 (55×55) -->
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" 
-                         style="margin:0 auto 12px auto; background:rgba(99,102,241,0.88); border-radius:14px; width:82px; height:82px;">
+                         style="margin:0 auto 12px auto; background:rgba(99,102,241,0.88); border-radius:14px; width:55px; height:55px;">
                     <tr>
-                      <td style="text-align:center; padding-top:8px; font-size:26px; color:#ffffff;">&#128241;</td>
+                      <td style="text-align:center; padding-top:5px; font-size:18px; color:#ffffff;">&#128241;</td>
                     </tr>
                     <tr>
                       <td style="text-align:center; font-size:9px; font-weight:700; color:#ffffff; padding:0 4px 6px 4px; line-height:1;">
@@ -724,11 +725,11 @@ def to_html(all_articles):
                       </td>
                     </tr>
                   </table>
-                  <!-- Play Store 정사각형 -->
+                  <!-- Play Store 정사각형 (55×55) -->
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" 
-                         style="margin:0 auto; background:rgba(16,185,129,0.88); border-radius:14px; width:82px; height:82px;">
+                         style="margin:0 auto; background:rgba(16,185,129,0.88); border-radius:14px; width:55px; height:55px;">
                     <tr>
-                      <td style="text-align:center; padding-top:8px; font-size:26px; color:#ffffff;">&#9654;</td>
+                      <td style="text-align:center; padding-top:5px; font-size:18px; color:#ffffff;">&#9654;</td>
                     </tr>
                     <tr>
                       <td style="text-align:center; font-size:9px; font-weight:700; color:#ffffff; padding:0 4px 6px 4px; line-height:1;">
@@ -737,11 +738,11 @@ def to_html(all_articles):
                     </tr>
                   </table>
                 </td>
-                <!-- 우측: 휴대폰 (원래 약간 사각 + 살짝 라운드, 얇은 테두리는 휴대폰 모양에 맞춰 라운드) -->
+                <!-- 우측: 휴대폰 (2배 크기 + 캡처처럼 둥근 테두리) -->
                 <td style="text-align:center;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                         style="margin:0 auto;background-color:#1a1a3a;border-radius:14px;
-                                border:1.5px solid rgba(140,170,255,0.5);padding:8px 8px 6px;">
+                         style="margin:0 auto;background-color:#1a1a3a;border-radius:26px;
+                                border:1.5px solid rgba(140,170,255,0.5);padding:10px 10px 8px;">
                     <!-- 노치 -->
                     <tr>
                       <td colspan="3" style="text-align:center;padding-bottom:5px;line-height:0;font-size:0;">
@@ -754,21 +755,21 @@ def to_html(all_articles):
                         </table>
                       </td>
                     </tr>
-                    <!-- 앱 아이콘 3×3 -->
+                    <!-- 앱 아이콘 3×3 (크기 확대) -->
                     <tr>
-                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#6366f1;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#10b981;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#f59e0b;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:24px;height:24px;background-color:#6366f1;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:24px;height:24px;background-color:#10b981;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:24px;height:24px;background-color:#f59e0b;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
                     </tr>
                     <tr>
-                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#ef4444;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#8b5cf6;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#06b6d4;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:24px;height:24px;background-color:#ef4444;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:24px;height:24px;background-color:#8b5cf6;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:24px;height:24px;background-color:#06b6d4;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
                     </tr>
                     <tr>
-                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#ec4899;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#f97316;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#14b8a6;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:24px;height:24px;background-color:#ec4899;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:24px;height:24px;background-color:#f97316;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:24px;height:24px;background-color:#14b8a6;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
                     </tr>
                     <!-- 하단 바 -->
                     <tr>
@@ -780,12 +781,12 @@ def to_html(all_articles):
                         </table>
                       </td>
                     </tr>
-                    <!-- 홈 버튼 (이미 동그라미 + 주위 연한 테두리도 원형으로) -->
+                    <!-- 홈 버튼 (원형) -->
                     <tr>
                       <td colspan="3" style="text-align:center;padding-top:4px;padding-bottom:2px;line-height:0;font-size:0;">
                         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
                           <tr>
-                            <td style="width:13px;height:13px;border-radius:50%;
+                            <td style="width:17px;height:17px;border-radius:50%;
                                        background-color:rgba(140,170,255,0.28);
                                        border:1px solid rgba(140,170,255,0.45);font-size:0;">&nbsp;</td>
                           </tr>
