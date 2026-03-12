@@ -689,11 +689,12 @@ def to_html(all_articles):
                         font-family:Arial,sans-serif;">
               &#128225;&nbsp;&nbsp;WEEKLY APP MARKET NEWS
             </div>
-            <!-- 제목: 글자별 컬러로 그라데이션 시뮬레이션 -->
+            <!-- 제목: 한 줄, 앱마켓 흰색 + 뉴스레터 그라데이션 -->
             <div style="margin-bottom:13px;line-height:1.15;
-                        font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
-              <span style="font-size:34px;font-weight:900;color:#ffffff;">앱 마켓</span><br>
-              <span style="font-size:34px;font-weight:900;color:#93c5fd;">뉴</span><span
+                        font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;
+                        white-space:nowrap;">
+              <span style="font-size:34px;font-weight:900;color:#ffffff;">앱 마켓&nbsp;</span><span
+                    style="font-size:34px;font-weight:900;color:#93c5fd;">뉴</span><span
                     style="font-size:34px;font-weight:900;color:#a78bfa;">스</span><span
                     style="font-size:34px;font-weight:900;color:#c084fc;">레</span><span
                     style="font-size:34px;font-weight:900;color:#f0abfc;">터</span>
