@@ -2,7 +2,7 @@ import os
 import json
 import smtplib
 import re
-import base64, os
+import base64
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -43,11 +43,11 @@ today = today_dt.strftime("%Y년 %m월 %d일")
 week_ago_dt = today_dt - timedelta(days=7)
 week_ago = week_ago_dt.strftime("%Y년 %m월 %d일")
 
-# ── 주차 레이블 (X월 X째주) ──────────────────────────────────
+# ── 주차 레이블 ──────────────────────────────────────────────
 def get_week_label(dt):
     week_num = (dt.day - 1) // 7 + 1
     korean_nums = ["첫", "둘", "셋", "넷", "다섯"]
-    return f"{dt.month}월 {korean_nums[min(week_num - 1, 4)]}째주"
+    return f"{dt.month}월 {korean_nums[min(week_num-1, 4)]}째주"
 
 week_label = get_week_label(today_dt)
 
@@ -57,7 +57,6 @@ GOOGLEBOT_UA = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
                 "(compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
 
 # ── 아이콘 Base64 ────────────────────────────────────────────
-import base64
 ICON_PATH = "icon.png"
 with open(ICON_PATH, "rb") as f:
     _ext = os.path.splitext(ICON_PATH)[-1].lstrip(".").replace("jpg", "jpeg")
@@ -168,6 +167,7 @@ PRESS_MAP = {
     "jibs.co.kr": "JIBS",
     "andongilbo.co.kr": "안동일보", "mirae-biz.com": "미래경제",
     "pinetree.news": "파인트리뉴스",
+    "srtimes.kr": "SR타임스",
 }
 
 def get_press_name(url: str, title: str = "") -> str:
@@ -198,14 +198,11 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
 
 # ── snippet 품질 검증 ─────────────────────────────────────────
 def is_valid_snippet(text: str) -> bool:
-    if not text or len(text) < 30:
+    if not text or len(text) < 20:
         return False
     if "google news" in text.lower():
         return False
-    if text.count(",") + text.count("，") >= 6:
-        return False
-    has_sentence_end = bool(re.search(r"[다요죠까네\.!?]", text))
-    if not has_sentence_end and len(text) > 60:
+    if text.count(",") + text.count("，") >= 8:
         return False
     return True
 
@@ -477,79 +474,115 @@ def fetch_google_articles(keyword):
         return []
 
 
-# ── 요약 생성 ───────────────────────────────────────────────
+# ── 핵심 요약 생성 (개선) ────────────────────────────────────
 POLICY_KEYWORDS = [
     "수수료", "정책", "규제", "법", "인하", "허용", "금지", "의무",
     "심사", "결제", "소송", "방통위", "공정위", "안티스티어링",
     "외부결제", "인앱결제", "제3자결제", "사이드로딩"
 ]
-BAD_STARTS = ["이에 ", "이를 ", "이후 ", "이와 ", "한편 ", "또한 ", "그러나 ", "하지만 ", "따라서 ", "이같은 ", "이번 ", "이런 ", "이같이 "]
 
-def to_bullet_style(text):
+def extract_best_sentence(text: str, title: str = "") -> str:
+    """summary에서 가장 핵심적인 1문장을 추출. 없으면 title 사용."""
     text = clean_spaces(text)
-    for b in BAD_STARTS:
-        if text.startswith(b):
-            return None
-    first_word = text.split(" ")[0]
-    if len(first_word) <= 2 and len(text) > len(first_word):
-        return None
-    endings = [
-        ("하고 있다", ""), ("되고 있다", ""), ("병행되고 있다", "병행"),
-        ("시행 중이다", "시행"), ("논의 중이다", "논의"), ("검토 중이다", "검토"),
-        ("인하됐으며", "인하"), ("인하됐다", "인하"), ("인하했다", "인하"),
-        ("허용됐다", "허용"), ("허용했다", "허용"), ("도입됐다", "도입"),
-        ("발표됐다", "발표"), ("시행됐다", "시행"), ("강화됐다", "강화"),
-        ("부각됐다", "부각"), ("이어지고 있다", "이어짐"), ("높아지고 있다", "상승"),
-        ("중이다", "중"), ("이다", ""), ("됐다", ""), ("했다", ""),
-        ("한다", ""), ("된다", ""), ("있다", ""), ("없다", ""),
-        ("밝혔다", ""), ("전했다", ""), ("나타났다", ""), ("보인다", ""),
-        ("예정이다", "예정"), ("것이다", ""), ("했으며", ""), ("했고", "")
-    ]
-    for old, new in endings:
-        if text.endswith(old):
-            text = text[:-len(old)] + new
+    if not text:
+        return _trim(title, 60) if title else ""
+
+    # 문장 분리 (마침표, 느낌표, 물음표 기준)
+    sents = re.split(r"(?<=[다요죠까네\.!?])\s+", text)
+    sents = [s.strip() for s in sents if len(s.strip()) >= 20]
+
+    # 연결어로 시작하는 문장 제거
+    bad_starts = ("이에 ", "이를 ", "이후 ", "이와 ", "한편 ", "또한 ",
+                  "그러나 ", "하지만 ", "따라서 ", "이같은 ", "이런 ", "이같이 ",
+                  "특히 이", "이 같은", "이어 ")
+    filtered = [s for s in sents if not any(s.startswith(b) for b in bad_starts)]
+    if not filtered:
+        filtered = sents  # 전부 걸리면 원본 사용
+
+    if not filtered:
+        return _trim(title, 60)
+
+    # 정책 키워드 포함 문장 우선
+    scored = []
+    for s in filtered:
+        sc = sum(1 for pk in POLICY_KEYWORDS if pk in s)
+        scored.append((sc, s))
+    scored.sort(key=lambda x: -x[0])
+
+    best = scored[0][1]
+    return _trim(best, 70)
+
+def _trim(text: str, max_len: int) -> str:
+    """자연스러운 위치에서 말줄임표 처리."""
+    if len(text) <= max_len:
+        return text
+    # 조사/어미 단위로 자르기
+    cut = text[:max_len]
+    for sep in (" ", ",", "，"):
+        idx = cut.rfind(sep)
+        if idx > max_len * 0.6:
+            cut = cut[:idx]
             break
-    text = re.sub(r"[.。?！!,]+$", "", text).strip()
-    return text if len(text) > 10 else None
+    return cut.rstrip(" ,，.。") + "…"
 
 def build_summary_html(all_articles):
-    all_items = []
+    items = []
+    seen_texts = set()
+
     for kw, articles in all_articles.items():
         for a in articles:
-            src = a.get("summary") or a.get("title", "")
-            sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", src) if len(s.strip()) > 15]
-            for sent in sents:
-                line = to_bullet_style(sent)
-                if not line:
-                    continue
-                if len(line) > 58:
-                    natural_cut = max(line[:58].rfind("，"), line[:58].rfind(","), line[:58].rfind("。"), line[:58].rfind("."), line[:58].rfind(" "))
-                    cut = natural_cut if natural_cut > 25 else 58
-                    line = line[:cut].rstrip(" ,，.。") + "…"
-                priority = sum(1 for pk in POLICY_KEYWORDS if pk in line or pk in a.get("title", ""))
-                all_items.append((priority, line))
-                break
+            src = a.get("summary") or ""
+            line = extract_best_sentence(src, a.get("title", ""))
+            if not line or line in seen_texts:
+                continue
+            seen_texts.add(line)
+            priority = sum(1 for pk in POLICY_KEYWORDS if pk in line or pk in a.get("title",""))
+            items.append((priority, line))
 
-    seen = set()
-    parts = []
-    for _, line in sorted(all_items, key=lambda x: -x[0]):
-        if line in seen:
+    items.sort(key=lambda x: -x[0])
+    # 상위 3개
+    top3 = []
+    seen2 = set()
+    for _, line in items:
+        if line in seen2:
             continue
-        seen.add(line)
-        parts.append(f'<div style="font-size:15px;line-height:26px;color:#334155;margin-bottom:4px;">• {line}</div>')
-        if len(parts) >= 3:
+        seen2.add(line)
+        top3.append(line)
+        if len(top3) >= 3:
             break
 
-    return "".join(parts) or '<div style="font-size:14px;color:#94a3b8;">이번 주 주요 내용을 찾지 못했습니다.</div>'
+    if not top3:
+        return '<div style="font-size:14px;color:#94a3b8;padding:4px 0;">이번 주 주요 내용을 찾지 못했습니다.</div>'
+
+    # 카드형 디자인 (이메일 호환 테이블)
+    accent_colors = ["#4f46e5", "#db2777", "#059669"]
+    rows = ""
+    for i, line in enumerate(top3):
+        color = accent_colors[i % len(accent_colors)]
+        rows += f"""
+        <tr>
+          <td style="padding:0 0 10px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td width="4" style="background-color:{color};border-radius:3px;">&nbsp;</td>
+                <td style="padding:10px 14px;background-color:#ffffff;border-radius:0 8px 8px 0;
+                            font-size:14px;line-height:22px;color:#1e293b;border:1px solid #e5e7eb;border-left:none;">
+                  {line}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>"""
+
+    return f"""<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">{rows}</table>"""
 
 
-# ── HTML 변환 ────────────────────────────────────────────────
+# ── HTML 생성 ────────────────────────────────────────────────
 def to_html(all_articles):
     summary_html = build_summary_html(all_articles)
     palette = ["#4f46e5", "#db2777", "#d97706", "#059669", "#2563eb", "#dc2626", "#7c3aed", "#0891b2"]
     kw_colors = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
 
-    # 통계 바용 카운트
     article_count = sum(len(v) for v in all_articles.values())
     issue_count   = len(all_articles)
 
@@ -573,15 +606,15 @@ def to_html(all_articles):
                     f"&default=1"
                 )
                 image_td = f'''
-                  <td width="130" style="padding:11px 0 11px 12px;background-color:#ffffff;vertical-align:top;">
+                  <td width="130" style="padding:11px 0 11px 12px;vertical-align:top;">
                     <img src="{proxy_url}" width="120" height="90"
-                         style="width:120px;height:90px;object-fit:cover;border-radius:10px;display:block;background-color:#f8fafc;" alt="">
+                         style="width:120px;height:90px;border-radius:10px;display:block;background-color:#f8fafc;" alt="">
                   </td>
                 '''
-                text_padding_left = "8px"
+                text_pl = "8px"
             else:
                 image_td = ""
-                text_padding_left = "16px"
+                text_pl  = "16px"
 
             summary_text = a.get("summary", "")
             if not summary_text or normalize_text(summary_text) == normalize_text(a["title"]):
@@ -589,199 +622,164 @@ def to_html(all_articles):
 
             cards_html += f"""
             <tr>
-              <td style="padding:0 36px 8px 36px;">
-                <div style="border:1.5px solid #e5e7eb;border-radius:14px;overflow:hidden;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                    <tr>
-                      <td width="5" style="background-color:{color};">&nbsp;</td>
-                      {image_td}
-                      <td style="padding:11px 18px 11px {text_padding_left};background-color:#ffffff;vertical-align:top;">
-                        <div style="margin-bottom:5px;">
-                          <span style="display:inline-block;background-color:{tag_bg};color:{color};
-                                       font-size:11px;line-height:17px;font-weight:700;padding:2px 9px;border-radius:999px;">{kw}</span>
-                        </div>
-                        <div style="font-size:17px;line-height:25px;color:#111827;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
-                          {a['title']}
-                        </div>
-                        <div style="padding-top:5px;font-size:13.5px;line-height:21px;color:#4b5563;">
-                          {summary_text}
-                        </div>
-                        <div style="padding-top:6px;font-size:12px;line-height:18px;color:#94a3b8;">
-                          {a['date']}{' · ' + a['press'] if a.get('press') else ''}
-                        </div>
-                        <div style="padding-top:8px;text-align:right;">
-                          <a href="{a['link']}" style="display:inline-block;color:#ffffff;text-decoration:none;
-                             font-size:12px;font-weight:700;padding:6px 13px;border-radius:8px;background-color:#374151;">
-                             🔗원문보기
-                          </a>
-                        </div>
-                      </td>
-                    </tr>
-                  </table>
-                </div>
+              <td style="padding:0 32px 10px 32px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+                       style="border:1.5px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+                  <tr><td colspan="3" style="height:4px;background-color:{color};font-size:0;line-height:0;">&nbsp;</td></tr>
+                  <tr>
+                    {image_td}
+                    <td style="padding:12px 18px 12px {text_pl};vertical-align:top;">
+                      <div style="margin-bottom:6px;">
+                        <span style="display:inline-block;background-color:{tag_bg};color:{color};
+                                     font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;">{kw}</span>
+                      </div>
+                      <div style="font-size:16px;line-height:24px;color:#111827;font-weight:800;
+                                  font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
+                        {a['title']}
+                      </div>
+                      <div style="padding-top:5px;font-size:13px;line-height:21px;color:#4b5563;">
+                        {summary_text}
+                      </div>
+                      <div style="padding-top:6px;font-size:11px;color:#9ca3af;">
+                        {a['date']}{(' · ' + a['press']) if a.get('press') else ''}
+                      </div>
+                      <div style="padding-top:8px;text-align:right;">
+                        <a href="{a['link']}" style="display:inline-block;color:#ffffff;text-decoration:none;
+                           font-size:12px;font-weight:700;padding:5px 12px;border-radius:7px;background-color:#374151;">
+                           🔗 원문보기
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>"""
 
-    empty_html = '<tr><td style="padding:0 36px 24px;color:#94a3b8;">이번 주 관련 기사를 찾지 못했습니다.</td></tr>'
+    empty_html = '<tr><td style="padding:0 32px 24px;color:#94a3b8;">이번 주 관련 기사를 찾지 못했습니다.</td></tr>'
 
-    return f"""
-<html><body style="margin:0;padding:0;background-color:#f3f6fb;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#1f2937;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#EEF0F9;">
-        <tr><td align="center" style="padding:32px 16px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
+    return f"""<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#eef0f7;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#1f2937;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#eef0f7;">
+<tr><td align="center" style="padding:28px 12px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="620"
+       style="max-width:620px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.10);">
 
-            <!-- ── 헤더 SVG 배너 ── -->
-            <tr><td style="line-height:0;font-size:0;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="900" height="158" viewBox="0 0 620 210" style="display:block;width:100%;height:auto;">
-                <defs>
-                  <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#0f0c29"/>
-                    <stop offset="50%" stop-color="#302b63"/>
-                    <stop offset="100%" stop-color="#1a1a4e"/>
-                  </linearGradient>
-                  <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#93c5fd"/>
-                    <stop offset="50%" stop-color="#c4b5fd"/>
-                    <stop offset="100%" stop-color="#f0abfc"/>
-                  </linearGradient>
-                  <linearGradient id="glowBlue" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#6366f1" stop-opacity="0.5"/>
-                    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
-                  </linearGradient>
-                  <linearGradient id="glowPink" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#a855f7" stop-opacity="0.45"/>
-                    <stop offset="100%" stop-color="#ec4899" stop-opacity="0"/>
-                  </linearGradient>
-                  <linearGradient id="phoneBody" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#2d2d5e"/>
-                    <stop offset="100%" stop-color="#1a1a3a"/>
-                  </linearGradient>
-                  <linearGradient id="screenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#0d1230"/>
-                    <stop offset="100%" stop-color="#0a0a1f"/>
-                  </linearGradient>
-                  <filter id="softBlur"><feGaussianBlur stdDeviation="28"/></filter>
-                  <filter id="iconShadow"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="rgba(0,0,0,0.35)"/></filter>
-                </defs>
-                <!-- 배경 -->
-                <rect width="620" height="210" fill="url(#bgGrad)"/>
-                <!-- 글로우 원 -->
-                <circle cx="80"  cy="60"  r="110" fill="url(#glowBlue)" filter="url(#softBlur)"/>
-                <circle cx="560" cy="40"  r="90"  fill="#00d4ff" fill-opacity="0.18" filter="url(#softBlur)"/>
-                <circle cx="300" cy="180" r="80"  fill="url(#glowPink)" filter="url(#softBlur)"/>
-                <!-- 별 -->
-                <circle cx="30"  cy="20"  r="1.2" fill="white" fill-opacity="0.9"/>
-                <circle cx="80"  cy="45"  r="0.8" fill="white" fill-opacity="0.6"/>
-                <circle cx="150" cy="15"  r="1.5" fill="white" fill-opacity="0.8"/>
-                <circle cx="220" cy="55"  r="0.9" fill="white" fill-opacity="0.5"/>
-                <circle cx="310" cy="25"  r="1.2" fill="white" fill-opacity="0.7"/>
-                <circle cx="400" cy="10"  r="1.0" fill="white" fill-opacity="0.6"/>
-                <circle cx="460" cy="50"  r="1.5" fill="white" fill-opacity="0.5"/>
-                <circle cx="40"  cy="140" r="0.9" fill="white" fill-opacity="0.4"/>
-                <circle cx="120" cy="170" r="1.2" fill="white" fill-opacity="0.6"/>
-                <circle cx="200" cy="130" r="0.8" fill="white" fill-opacity="0.5"/>
-                <circle cx="270" cy="175" r="1.0" fill="white" fill-opacity="0.7"/>
-                <circle cx="350" cy="155" r="0.8" fill="white" fill-opacity="0.4"/>
-                <!-- 데이터 라인 -->
-                <line x1="0" y1="85"  x2="400" y2="85"  stroke="rgba(120,200,255,0.12)" stroke-width="1"/>
-                <line x1="0" y1="130" x2="350" y2="130" stroke="rgba(120,200,255,0.08)" stroke-width="1"/>
-                <!-- 점선 원형 데코 -->
-                <circle cx="500" cy="160" r="60" fill="none" stroke="rgba(150,180,255,0.1)" stroke-width="1" stroke-dasharray="4 6"/>
-                <circle cx="500" cy="160" r="42" fill="none" stroke="rgba(150,180,255,0.07)" stroke-width="1" stroke-dasharray="2 5"/>
-                <!-- 스마트폰 -->
-                <rect x="448" y="18" width="82" height="170" rx="14" fill="url(#phoneBody)" stroke="rgba(140,170,255,0.45)" stroke-width="1.5" filter="url(#iconShadow)"/>
-                <rect x="456" y="32" width="66" height="132" rx="6" fill="url(#screenGrad)"/>
-                <rect x="472" y="28" width="34" height="6" rx="3" fill="#0d1230"/>
-                <circle cx="489" cy="175" r="5" fill="rgba(140,170,255,0.25)" stroke="rgba(140,170,255,0.4)" stroke-width="1"/>
-                <!-- 앱 아이콘 3x3 -->
-                <rect x="462" y="40" width="16" height="16" rx="4" fill="#6366f1"/>
-                <rect x="482" y="40" width="16" height="16" rx="4" fill="#10b981"/>
-                <rect x="502" y="40" width="16" height="16" rx="4" fill="#f59e0b"/>
-                <rect x="462" y="62" width="16" height="16" rx="4" fill="#ef4444"/>
-                <rect x="482" y="62" width="16" height="16" rx="4" fill="#8b5cf6"/>
-                <rect x="502" y="62" width="16" height="16" rx="4" fill="#06b6d4"/>
-                <rect x="462" y="84" width="16" height="16" rx="4" fill="#ec4899"/>
-                <rect x="482" y="84" width="16" height="16" rx="4" fill="#f97316"/>
-                <rect x="502" y="84" width="16" height="16" rx="4" fill="#14b8a6"/>
-                <!-- 화면 하단 바 -->
-                <rect x="462" y="108" width="57" height="7" rx="3.5" fill="rgba(120,160,255,0.2)"/>
-                <rect x="462" y="120" width="38" height="7" rx="3.5" fill="rgba(120,160,255,0.15)"/>
-                <rect x="462" y="132" width="48" height="7" rx="3.5" fill="rgba(120,160,255,0.1)"/>
-                <!-- 독 -->
-                <rect x="456" y="148" width="66" height="1" fill="rgba(140,170,255,0.15)"/>
-                <rect x="462" y="152" width="12" height="12" rx="3" fill="#6366f1" fill-opacity="0.7"/>
-                <rect x="479" y="152" width="12" height="12" rx="3" fill="#10b981" fill-opacity="0.7"/>
-                <rect x="496" y="152" width="12" height="12" rx="3" fill="#ef4444" fill-opacity="0.7"/>
-                <!-- 플로팅 카드: App Store -->
-                <rect x="390" y="28" width="44" height="38" rx="9" fill="rgba(99,102,241,0.85)" filter="url(#iconShadow)"/>
-                <text x="412" y="52" text-anchor="middle" font-size="18" fill="white">&#128241;</text>
-                <text x="412" y="62" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.8)" font-family="Arial,sans-serif">App Store</text>
-                <!-- 플로팅 카드: Play Store -->
-                <rect x="384" y="145" width="44" height="38" rx="9" fill="rgba(16,185,129,0.85)" filter="url(#iconShadow)"/>
-                <text x="406" y="166" text-anchor="middle" font-size="16" fill="white">&#9654;</text>
-                <text x="406" y="177" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.8)" font-family="Arial,sans-serif">Play Store</text>
-                <!-- 헤더 텍스트 -->
-                <text x="36" y="72" font-size="10" font-weight="700" fill="rgba(160,210,255,0.8)" letter-spacing="3" font-family="Arial,sans-serif">&#128225;  WEEKLY APP MARKET NEWS</text>
-                <text x="36" y="108" font-size="30" font-weight="900" fill="white" font-family="Arial,sans-serif">&#xC571; &#xB9C8;&#xCF13;</text>
-                <text x="36" y="144" font-size="30" font-weight="900" font-family="Arial,sans-serif" fill="url(#titleGrad)">&#xB274;&#xC2A4;&#xB808;&#xD130;</text>
-                <text x="36" y="170" font-size="11.5" fill="rgba(180,215,255,0.7)" font-family="Arial,sans-serif">&#9679; &#xAC80;&#xC0C9; &#xBC94;&#xC704; : {week_ago} ~ {today}</text>
-              </svg>
-            </td></tr>
-
-            <!-- ── 통계 바 (padding 7px: 원본의 2/3) ── -->
-            <tr><td style="background:#1e1e42;padding:7px 32px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                <tr>
-                  <td style="text-align:center;padding:3px 0;border-right:1px solid rgba(255,255,255,0.08);">
-                    <div style="font-size:15px;font-weight:700;color:#93c5fd;">{article_count}</div>
-                    <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">주요 기사</div>
-                  </td>
-                  <td style="text-align:center;padding:3px 0;border-right:1px solid rgba(255,255,255,0.08);">
-                    <div style="font-size:15px;font-weight:700;color:#93c5fd;">{issue_count}</div>
-                    <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">핵심 이슈</div>
-                  </td>
-                  <td style="text-align:center;padding:3px 0;">
-                    <div style="font-size:15px;font-weight:700;color:#93c5fd;">{week_label}</div>
-                    <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">이번 주 호</div>
-                  </td>
-                </tr>
-              </table>
-            </td></tr>
-
-            <!-- ── 인사말 ── -->
-            <tr><td style="padding:24px 36px 8px 36px;font-size:15px;line-height:24px;color:#475569;">안녕하세요.<br>이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.</td></tr>
-
-            <!-- ── 핵심 요약 ── -->
-            <tr><td style="padding:16px 36px 8px 36px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F9ECF1;border-radius:16px;">
-                <tr><td style="padding:20px 24px;">
-                  <div style="font-size:17px;line-height:26px;font-weight:800;color:#0f172a;margin-bottom:12px;">🔎 핵심 요약</div>
-                  {summary_html}
-                </td></tr>
-              </table>
-            </td></tr>
-
-            <!-- ── 주요 기사 ── -->
-            <tr><td style="padding:24px 36px 12px 36px;">
-              <div style="font-size:22px;line-height:30px;font-weight:800;color:#0f172a;">📰 주요 기사</div>
-            </td></tr>
-
-            {cards_html if total_count > 0 else empty_html}
-
-            <!-- ── 다크 푸터 (padding 18px: 원본의 4/5) ── -->
-            <tr><td style="background:linear-gradient(135deg,#1a1a3e,#302b63);padding:18px 32px;text-align:center;">
-              <div style="font-size:15px;font-weight:900;color:#fff;margin-bottom:6px;">📱 앱 마켓 <span style="color:#a78bfa;">뉴스레터</span></div>
-              <div style="font-size:11px;color:rgba(180,200,240,0.65);line-height:1.9;">
-                매주 월요일 발행 · 구독 문의: hj@kisa.or.kr<br>
-                자동 발송 · {today}
-              </div>
-            </td></tr>
-
-          </table>
-        </td></tr>
+  <!-- ══ 헤더: 다크 배경 + HTML 레이아웃 (이메일 완전 호환) ══ -->
+  <tr>
+    <td style="background-color:#12103a;padding:0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <!-- 좌측 텍스트 -->
+          <td style="padding:26px 0 22px 32px;vertical-align:middle;">
+            <div style="font-size:10px;font-weight:700;color:#93c5fd;letter-spacing:3px;margin-bottom:12px;">
+              &#128225; WEEKLY APP MARKET NEWS
+            </div>
+            <div style="margin-bottom:6px;">
+              <img src="{ICON_BASE64}" width="36" height="36"
+                   style="display:inline-block;vertical-align:middle;border-radius:8px;" alt="">
+              <span style="display:inline-block;vertical-align:middle;margin-left:10px;
+                           font-size:26px;font-weight:900;color:#ffffff;
+                           font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;line-height:1.2;">
+                앱 마켓 뉴스레터
+              </span>
+            </div>
+            <div style="font-size:12px;color:rgba(180,210,255,0.75);margin-top:10px;">
+              &#9679; 검색 범위 : {week_ago} ~ {today}
+            </div>
+          </td>
+          <!-- 우측 앱 아이콘 장식 -->
+          <td style="padding:20px 28px 20px 10px;text-align:right;vertical-align:middle;width:130px;">
+            <div style="font-size:42px;line-height:1.1;">&#128241;</div>
+            <div style="margin-top:6px;font-size:18px;letter-spacing:4px;">&#127918;&#128202;&#128722;</div>
+          </td>
+        </tr>
       </table>
-    </body></html>
-    """
+    </td>
+  </tr>
+
+  <!-- ══ 통계 바 ══ -->
+  <tr>
+    <td style="background-color:#1e1e42;padding:7px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="33%" style="text-align:center;padding:3px 0;border-right:1px solid rgba(255,255,255,0.1);">
+            <div style="font-size:15px;font-weight:700;color:#93c5fd;">{article_count}</div>
+            <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">주요 기사</div>
+          </td>
+          <td width="33%" style="text-align:center;padding:3px 0;border-right:1px solid rgba(255,255,255,0.1);">
+            <div style="font-size:15px;font-weight:700;color:#93c5fd;">{issue_count}</div>
+            <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">핵심 이슈</div>
+          </td>
+          <td width="33%" style="text-align:center;padding:3px 0;">
+            <div style="font-size:14px;font-weight:700;color:#93c5fd;">{week_label}</div>
+            <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">이번 주 호</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ══ 인사말 ══ -->
+  <tr>
+    <td style="padding:22px 32px 10px 32px;font-size:14px;line-height:22px;color:#475569;">
+      안녕하세요.<br>
+      이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.
+    </td>
+  </tr>
+
+  <!-- ══ 핵심 요약 ══ -->
+  <tr>
+    <td style="padding:12px 32px 8px 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+             style="background-color:#f8f7ff;border-radius:14px;border:1px solid #e0d9ff;">
+        <tr>
+          <td style="padding:18px 20px 10px 20px;">
+            <div style="font-size:16px;font-weight:800;color:#1e1b4b;margin-bottom:14px;">&#128269; 핵심 요약</div>
+            {summary_html}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ══ 주요 기사 헤더 ══ -->
+  <tr>
+    <td style="padding:20px 32px 10px 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td style="font-size:18px;font-weight:800;color:#0f172a;white-space:nowrap;padding-right:12px;">
+            &#128240; 주요 기사
+          </td>
+          <td width="100%">
+            <div style="height:2px;background-color:#e0d9ff;border-radius:2px;"></div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ══ 기사 카드 ══ -->
+  {cards_html if total_count > 0 else empty_html}
+
+  <!-- ══ 푸터 ══ -->
+  <tr>
+    <td style="background-color:#1e1e42;padding:18px 32px;text-align:center;border-radius:0 0 20px 20px;">
+      <div style="font-size:14px;font-weight:900;color:#ffffff;margin-bottom:6px;">
+        &#128241; 앱 마켓 <span style="color:#a78bfa;">뉴스레터</span>
+      </div>
+      <div style="font-size:11px;color:rgba(180,200,240,0.65);line-height:1.9;">
+        매주 월요일 발행 &middot; 구독 문의: hj@kisa.or.kr<br>
+        자동 발송 &middot; {today}
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>"""
 
 
 # ── 메일 발송 ───────────────────────────────────────────────
