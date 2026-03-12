@@ -616,7 +616,7 @@ def to_html(all_articles):
 
     return f"""
 <html><body style="margin:0;padding:0;background-color:#f3f6fb;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#1f2937;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F4EEF6;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#E6E9F7;">
         <tr><td align="center" style="padding:32px 16px;">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
             <tr><td style="background:linear-gradient(to right,#1D2B64 0%,#F8CDDA 51%,#1D2B64 100%);background-size:200% auto;padding:28px 36px;">
