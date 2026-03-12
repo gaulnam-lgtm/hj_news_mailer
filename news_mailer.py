@@ -707,83 +707,84 @@ def to_html(all_articles):
           </td>
 
           <!-- 우측 폰 목업 -->
-          <td style="padding:18px 26px 18px 8px;vertical-align:middle;text-align:center;width:148px;">
-            <!-- App Store 배지 -->
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                   style="margin:0 auto 8px auto;">
+          <td style="padding:18px 10px 18px 8px;vertical-align:middle;text-align:center;width:200px;">
+            <table role="presentation" cellpadding="0" cellspacing="8" border="0" width="100%" style="margin:0 auto;">
               <tr>
-                <td style="background:rgba(99,102,241,0.88);border-radius:9px;
-                            padding:5px 11px;font-size:10px;font-weight:700;
-                            color:#ffffff;font-family:Arial,sans-serif;white-space:nowrap;">
-                  &#128241; App Store
+                <!-- 좌측: App Store + Play Store 아이콘 (정사각형 + 라운드 모서리) -->
+                <td style="width:90px;vertical-align:top;padding-right:12px;">
+                  <!-- App Store 아이콘 -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 12px auto;background:rgba(99,102,241,0.88);border-radius:14px;width:82px;">
+                    <tr>
+                      <td style="padding:9px 0;text-align:center;font-size:10px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;white-space:nowrap;">
+                        &#128241; App Store
+                      </td>
+                    </tr>
+                  </table>
+                  <!-- Play Store 아이콘 -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;background:rgba(16,185,129,0.88);border-radius:14px;width:82px;">
+                    <tr>
+                      <td style="padding:9px 0;text-align:center;font-size:10px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;white-space:nowrap;">
+                        &#9654; Play Store
+                      </td>
+                    </tr>
+                  </table>
                 </td>
-              </tr>
-            </table>
-
-            <!-- 폰 바디 -->
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                   style="margin:0 auto;background-color:#1a1a3a;border-radius:14px;
-                          border:1.5px solid rgba(140,170,255,0.5);padding:8px 8px 6px;">
-              <!-- 노치 -->
-              <tr>
-                <td colspan="3" style="text-align:center;padding-bottom:5px;line-height:0;font-size:0;">
+                <!-- 우측: 휴대폰 (테두리 라운드 강화 + 홈버튼 주위 이미 동그라미) -->
+                <td style="text-align:center;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                         style="margin:0 auto;">
+                         style="margin:0 auto;background-color:#1a1a3a;border-radius:24px;
+                                border:1.5px solid rgba(140,170,255,0.5);padding:8px 8px 6px;">
+                    <!-- 노치 -->
                     <tr>
-                      <td style="width:22px;height:4px;background-color:#0d1230;
-                                 border-radius:2px;font-size:0;">&nbsp;</td>
+                      <td colspan="3" style="text-align:center;padding-bottom:5px;line-height:0;font-size:0;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0"
+                               style="margin:0 auto;">
+                          <tr>
+                            <td style="width:22px;height:4px;background-color:#0d1230;
+                                       border-radius:2px;font-size:0;">&nbsp;</td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <!-- 앱 아이콘 3×3 -->
+                    <tr>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#6366f1;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#10b981;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#f59e0b;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                    </tr>
+                    <tr>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#ef4444;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#8b5cf6;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#06b6d4;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                    </tr>
+                    <tr>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#ec4899;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#f97316;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                      <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#14b8a6;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
+                    </tr>
+                    <!-- 하단 바 -->
+                    <tr>
+                      <td colspan="3" style="padding-top:5px;text-align:center;line-height:0;font-size:0;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                          <tr>
+                            <td style="width:42px;height:5px;background-color:rgba(120,160,255,0.25);border-radius:3px;font-size:0;">&nbsp;</td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <!-- 홈 버튼 (이미 동그라미 + 주위도 동그라미 유지) -->
+                    <tr>
+                      <td colspan="3" style="text-align:center;padding-top:4px;padding-bottom:2px;line-height:0;font-size:0;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                          <tr>
+                            <td style="width:13px;height:13px;border-radius:50%;
+                                       background-color:rgba(140,170,255,0.28);
+                                       border:1px solid rgba(140,170,255,0.45);font-size:0;">&nbsp;</td>
+                          </tr>
+                        </table>
+                      </td>
                     </tr>
                   </table>
-                </td>
-              </tr>
-              <!-- 앱 아이콘 3×3 -->
-              <tr>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#6366f1;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#10b981;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#f59e0b;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-              </tr>
-              <tr>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#ef4444;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#8b5cf6;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#06b6d4;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-              </tr>
-              <tr>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#ec4899;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#f97316;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#14b8a6;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-              </tr>
-              <!-- 하단 바 -->
-              <tr>
-                <td colspan="3" style="padding-top:5px;text-align:center;line-height:0;font-size:0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
-                    <tr>
-                      <td style="width:42px;height:5px;background-color:rgba(120,160,255,0.25);border-radius:3px;font-size:0;">&nbsp;</td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <!-- 홈 버튼 -->
-              <tr>
-                <td colspan="3" style="text-align:center;padding-top:4px;padding-bottom:2px;line-height:0;font-size:0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
-                    <tr>
-                      <td style="width:13px;height:13px;border-radius:50%;
-                                 background-color:rgba(140,170,255,0.28);
-                                 border:1px solid rgba(140,170,255,0.45);font-size:0;">&nbsp;</td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-
-            <!-- Play Store 배지 -->
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                   style="margin:8px auto 0 auto;">
-              <tr>
-                <td style="background:rgba(16,185,129,0.88);border-radius:9px;
-                            padding:5px 11px;font-size:10px;font-weight:700;
-                            color:#ffffff;font-family:Arial,sans-serif;white-space:nowrap;">
-                  &#9654; Play Store
                 </td>
               </tr>
             </table>
