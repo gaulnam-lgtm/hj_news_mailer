@@ -705,8 +705,8 @@ def to_html(all_articles):
             </div>
           </td>
 
-<!-- 우측 폰 목업 -->
-          <td style="padding:18px 32px 18px 8px;vertical-align:middle;text-align:center;width:148px;min-width:148px;max-width:148px;">
+          <!-- 우측 폰 목업 -->
+          <td style="padding:18px 26px 18px 8px;vertical-align:middle;text-align:center;width:148px;">
             <!-- App Store 배지 -->
             <table role="presentation" cellpadding="0" cellspacing="0" border="0"
                    style="margin:0 auto 8px auto;">
@@ -718,14 +718,12 @@ def to_html(all_articles):
                 </td>
               </tr>
             </table>
+
             <!-- 폰 바디 -->
             <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                   style="margin:0 auto;border-spacing:0;border-collapse:separate;
-                          border-radius:16px;overflow:hidden;">
-              <tr><td style="background-color:#1a1a3a;border-radius:16px;
-                             border:1.5px solid rgba(140,170,255,0.5);padding:8px 8px 6px;">
+                   style="margin:0 auto;background-color:#1a1a3a;border-radius:14px;
+                          border:1.5px solid rgba(140,170,255,0.5);padding:8px 8px 6px;">
               <!-- 노치 -->
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
                 <td colspan="3" style="text-align:center;padding-bottom:5px;line-height:0;font-size:0;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0"
@@ -737,7 +735,6 @@ def to_html(all_articles):
                   </table>
                 </td>
               </tr>
-              
               <!-- 앱 아이콘 3×3 -->
               <tr>
                 <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#6366f1;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
