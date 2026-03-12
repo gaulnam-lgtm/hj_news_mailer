@@ -488,6 +488,9 @@ def to_bullet_style(text):
     for b in BAD_STARTS:
         if text.startswith(b):
             return None
+    first_word = text.split(" ")[0]
+    if len(first_word) <= 2 and len(text) > len(first_word):
+        return None
     endings = [
         ("하고 있다", ""), ("되고 있다", ""), ("병행되고 있다", "병행"),
         ("시행 중이다", "시행"), ("논의 중이다", "논의"), ("검토 중이다", "검토"),
