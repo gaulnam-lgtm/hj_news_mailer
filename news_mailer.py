@@ -710,29 +710,37 @@ def to_html(all_articles):
           <td style="padding:18px 10px 18px 8px;vertical-align:middle;text-align:center;width:200px;">
             <table role="presentation" cellpadding="0" cellspacing="8" border="0" width="100%" style="margin:0 auto;">
               <tr>
-                <!-- 좌측: App Store + Play Store 아이콘 (정사각형 + 라운드 모서리) -->
-                <td style="width:90px;vertical-align:top;padding-right:12px;">
-                  <!-- App Store 아이콘 -->
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 12px auto;background:rgba(99,102,241,0.88);border-radius:14px;width:82px;">
+                <!-- 좌측: App Store + Play Store (정사각형 + 라운드 모서리, 아이콘 위에 글자) -->
+                <td style="width:88px;vertical-align:top;padding-right:12px;">
+                  <!-- App Store 정사각형 -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" 
+                         style="margin:0 auto 12px auto; background:rgba(99,102,241,0.88); border-radius:14px; width:82px; height:82px;">
                     <tr>
-                      <td style="padding:9px 0;text-align:center;font-size:10px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;white-space:nowrap;">
-                        &#128241; App Store
+                      <td style="text-align:center; padding-top:8px; font-size:26px; color:#ffffff;">&#128241;</td>
+                    </tr>
+                    <tr>
+                      <td style="text-align:center; font-size:9px; font-weight:700; color:#ffffff; padding:0 4px 6px 4px; line-height:1;">
+                        App Store
                       </td>
                     </tr>
                   </table>
-                  <!-- Play Store 아이콘 -->
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;background:rgba(16,185,129,0.88);border-radius:14px;width:82px;">
+                  <!-- Play Store 정사각형 -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" 
+                         style="margin:0 auto; background:rgba(16,185,129,0.88); border-radius:14px; width:82px; height:82px;">
                     <tr>
-                      <td style="padding:9px 0;text-align:center;font-size:10px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;white-space:nowrap;">
-                        &#9654; Play Store
+                      <td style="text-align:center; padding-top:8px; font-size:26px; color:#ffffff;">&#9654;</td>
+                    </tr>
+                    <tr>
+                      <td style="text-align:center; font-size:9px; font-weight:700; color:#ffffff; padding:0 4px 6px 4px; line-height:1;">
+                        Play Store
                       </td>
                     </tr>
                   </table>
                 </td>
-                <!-- 우측: 휴대폰 (테두리 라운드 강화 + 홈버튼 주위 이미 동그라미) -->
+                <!-- 우측: 휴대폰 (원래 약간 사각 + 살짝 라운드, 얇은 테두리는 휴대폰 모양에 맞춰 라운드) -->
                 <td style="text-align:center;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                         style="margin:0 auto;background-color:#1a1a3a;border-radius:24px;
+                         style="margin:0 auto;background-color:#1a1a3a;border-radius:14px;
                                 border:1.5px solid rgba(140,170,255,0.5);padding:8px 8px 6px;">
                     <!-- 노치 -->
                     <tr>
@@ -772,7 +780,7 @@ def to_html(all_articles):
                         </table>
                       </td>
                     </tr>
-                    <!-- 홈 버튼 (이미 동그라미 + 주위도 동그라미 유지) -->
+                    <!-- 홈 버튼 (이미 동그라미 + 주위 연한 테두리도 원형으로) -->
                     <tr>
                       <td colspan="3" style="text-align:center;padding-top:4px;padding-bottom:2px;line-height:0;font-size:0;">
                         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
