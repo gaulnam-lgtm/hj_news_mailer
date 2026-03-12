@@ -520,12 +520,8 @@ def build_summary_html(all_articles):
                 line = to_bullet_style(sent)
                 if not line:
                     continue
-                if len(line) > 58:
-    natural_cut = max(
-        line[:58].rfind("，"), line[:58].rfind(","),
-        line[:58].rfind("。"), line[:58].rfind("."),
-        line[:58].rfind(" ")
-    )
+    if len(line) > 58:
+    natural_cut = max(line[:58].rfind("，"), line[:58].rfind(","), line[:58].rfind("。"), line[:58].rfind("."), line[:58].rfind(" "))
     cut = natural_cut if natural_cut > 25 else 58
     line = line[:cut].rstrip(" ,，.。") + "…"
                 priority = sum(1 for pk in POLICY_KEYWORDS if pk in line or pk in a.get("title", ""))
