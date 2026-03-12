@@ -24,7 +24,7 @@ MIN_ARTICLE_SCORE = int(os.environ.get("MIN_ARTICLE_SCORE", "7"))
 
 KEYWORDS_PLATFORM = json.loads(
     os.environ.get("KEYWORDS_PLATFORM", json.dumps([
-        "애플", "앱스토어", "구글", "플레이스토어", "앱마켓",
+        "애플", "앱스토어", "구글", "플레이스토어", "앱 마켓",
         "원스토어", "갤럭시스토어", "인앱결제", "외부결제",
         "제3자결제", "수수료", "정책", "규제", "심사", "결제"
     ], ensure_ascii=False))
@@ -289,7 +289,7 @@ def dedupe_articles(articles):
 def build_search_query(keyword):
     query_map = {
         "아웃링크": "아웃링크 앱스토어 | 아웃링크 인앱결제 | 아웃링크 애플 | 아웃링크 구글",
-        "웹결제": "웹결제 앱마켓 | 웹결제 인앱결제 | 웹결제 애플 | 웹결제 구글",
+        "웹결제": "웹결제 앱 마켓 | 웹결제 인앱결제 | 웹결제 애플 | 웹결제 구글",
         "구독 경제": "구독 경제 앱스토어 | 구독 경제 앱마켓 | 구독 서비스 애플 | 구독 서비스 구글",
         "앱 생태계": "앱 생태계 애플 | 앱 생태계 구글 | 앱마켓 생태계",
         "앱 개발사": "앱 개발사 앱마켓 | 앱 개발사 인앱결제 | 앱 개발사 애플 | 앱 개발사 구글",
@@ -629,7 +629,7 @@ def to_html(all_articles):
                      width="48" height="48"
                      style="width:48px;height:48px;display:inline-block;vertical-align:middle;"
                      alt="앱마켓 아이콘">
-                <span style="font-size:30px;line-height:38px;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#ffffff;">앱마켓 뉴스 레터</span>
+                <span style="font-size:30px;line-height:38px;font-weight:800;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;color:#ffffff;">앱 마켓 뉴스 레터</span>
               </div>
               <div style="padding-top:10px;font-size:15px;line-height:22px;color:#dbeafe;">검색 범위 : {week_ago} ~ {today}</div>
             </td></tr>
