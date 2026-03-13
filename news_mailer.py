@@ -631,7 +631,7 @@ def to_html(all_articles):
             <tr>
               <td style="padding:0 32px 10px 32px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-                       style="border:1.5px solid #e5e7eb;border-radius:14px;overflow:hidden;background-color:#ffffff;">
+                       style="border:1px solid #d1d5db;border-radius:14px;overflow:hidden;background-color:#ffffff;">
                   <tr>
                     <td width="5" style="background-color:{color};font-size:0;">&nbsp;</td>
                     {image_td}
@@ -688,18 +688,18 @@ def to_html(all_articles):
         padding:0;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
-          <td style="padding:25px 0 22px 32px;vertical-align:middle;">
-            <div style="font-size:13px;font-weight:800;letter-spacing:3px;color:rgba(147,197,253,0.85);margin-bottom:13px;font-family:Arial,sans-serif;">
+          <td style="padding:28px 0 24px 32px;vertical-align:middle;">
+            <div style="font-size:13px;font-weight:800;letter-spacing:3px;color:rgba(147,197,253,0.85);margin-bottom:14px;font-family:Arial,sans-serif;">
               &#128225;&nbsp;&nbsp;WEEKLY APP MARKET NEWS
             </div>
-            <div style="margin-bottom:12px;line-height:1.1;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;white-space:nowrap;">
+            <div style="margin-bottom:13px;line-height:1.1;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;white-space:nowrap;">
               <span style="font-size:36px;font-weight:900;color:#ffffff;">주간 앱 마켓 뉴스레터</span>
             </div>
             <div style="font-size:14px;color:rgba(180,215,255,0.75);font-family:Arial,sans-serif;">
               &#9679; 검색 범위 : {week_ago} ~ {today}
             </div>
           </td>
-          <td style="padding:16px 20px 16px 8px;vertical-align:middle;text-align:center;width:340px;">
+          <td style="padding:18px 20px 18px 8px;vertical-align:middle;text-align:center;width:340px;">
             <img src="{IMAGE2_BASE64}" style="max-width:320px;height:auto;display:block;border-radius:20px;" alt="App Market Visual">
           </td>
         </tr>
@@ -722,7 +722,7 @@ def to_html(all_articles):
           </td>
           <td width="33%" style="text-align:center;padding:3px 0;">
             <div style="font-size:14px;font-weight:700;color:#93c5fd;">{week_label}</div>
-            <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">이번 주차</div>
+            <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">이번 주 호</div>
           </td>
         </tr>
       </table>
@@ -741,7 +741,7 @@ def to_html(all_articles):
   <tr>
     <td style="padding:12px 32px 8px 32px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-             style="background-color:#edeaff;border-radius:18px;overflow:hidden;">
+             style="background-color:#f8f7ff;border-radius:18px;overflow:hidden;">
         <tr>
           <td style="padding:18px 20px 10px 20px;">
             <div style="font-size:16px;font-weight:800;color:#1e1b4b;margin-bottom:14px;">&#128269; 핵심 요약</div>
@@ -774,8 +774,8 @@ def to_html(all_articles):
   <!-- 푸터 -->
   <tr>
     <td style="background-color:#1e1e42;padding:18px 32px;text-align:center;border-radius:0 0 20px 20px;">
-      <div style="font-size:15px;font-weight:900;color:#ffffff;margin-bottom:6px;">
-        &#128241; 주간 앱 마켓 <span style="color:#a78bfa;">뉴스레터</span>
+      <div style="font-size:14px;font-weight:900;color:#ffffff;margin-bottom:6px;">
+        &#128241; 앱 마켓 <span style="color:#a78bfa;">뉴스레터</span>
       </div>
       <div style="font-size:11px;color:rgba(180,200,240,0.65);line-height:1.9;">
         매주 월요일 발행 &middot; 구독 문의: hj@kisa.or.kr<br>
