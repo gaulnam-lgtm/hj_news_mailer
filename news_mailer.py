@@ -297,11 +297,134 @@ def build_search_query(keyword):
 # STRICT_CONTEXT_KEYWORDS, POLICY_HINTS, is_relevant_article, score_article 함수도 원본 그대로
 
 def fetch_naver_articles(keyword):
-    # ... (원본 fetch_naver_articles 전체 코드 그대로 복사)
-    # (길어서 생략했지만 원본과 100% 동일합니다)
+    query = build_search_query(keyword)
+    url = f"https://openapi.naver.com/v1/search/news.json?query={quote(query)}&display=10&sort=date"
+    req = Request(url)
+    req.add_header("X-Naver-Client-Id", NAVER_CLIENT_ID)
+    req.add_header("X-Naver-Client-Secret", NAVER_CLIENT_SECRET)
 
+    try:
+        with urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"  [ERROR] Naver {keyword} 실패: {e}")
+        return []
+
+    articles = []
+    for item in data.get("items", []):
+        title   = clean_spaces(strip_html(item.get("title", "")))
+        desc    = clean_spaces(strip_html(item.get("description", "")))
+        link    = item.get("originallink") or item.get("link", "")
+        pub_str = item.get("pubDate", "")
+
+        try:
+            pub_dt = parsedate_to_datetime(pub_str).astimezone(timezone.utc)
+            if pub_dt < week_ago_dt:
+                continue
+            pub_label = pub_dt.strftime("%Y.%m.%d")
+        except:
+            continue
+
+        if not title:
+            continue
+        if is_blocked_domain(link):
+            continue
+        if not is_relevant_article(keyword, title, desc):
+            continue
+
+        press = get_press_name(link, title)
+        score = score_article(keyword, title, desc)
+        print(f"  [NAVER/{keyword}] ({score}) {title[:50]}...")
+
+        image, snippet = get_article_info(link)
+
+        if not desc or normalize_text(desc) == normalize_text(title):
+            desc = snippet or ""
+
+        articles.append({
+            "title": title, "press": press, "link": link,
+            "summary": desc, "date": pub_label,
+            "score": score, "keyword": keyword, "image": image
+        })
+
+    articles.sort(key=lambda x: x["score"], reverse=True)
+    articles = dedupe_articles(articles)
+    articles = [a for a in articles if a["score"] >= MIN_ARTICLE_SCORE]
+    return articles[:3]
+
+
+# ── 구글 뉴스 RSS 검색 ───────────────────────────────────────
 def fetch_google_articles(keyword):
-    # ... (원본 fetch_google_articles 전체 코드 그대로 복사)
+    query = quote(build_search_query(keyword))
+    rss_url = f"https://news.google.com/rss/search?q={query}&hl=ko&gl=KR&ceid=KR:ko"
+
+    req = Request(rss_url)
+    req.add_header("User-Agent", USER_AGENT)
+
+    try:
+        with urlopen(req, timeout=10) as resp:
+            xml_data = resp.read().decode("utf-8", errors="ignore")
+        root = ET.fromstring(xml_data)
+        articles = []
+
+        for item in root.findall(".//item")[:10]:
+            title_el  = item.find("title")
+            link_el   = item.find("link")
+            desc_el   = item.find("description")
+            pub_el    = item.find("pubDate")
+            source_el = item.find("source")
+
+            if not (title_el is not None and link_el is not None and title_el.text):
+                continue
+
+            title_raw = clean_spaces(strip_html(title_el.text))
+            title = title_raw.rsplit(" - ", 1)[0].strip() if " - " in title_raw else title_raw
+            press = get_press_name(link_el.text.strip(), title_raw)
+
+            link = link_el.text.strip()
+            real_link = source_el.get("url") if source_el is not None else None
+
+            desc_raw = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
+            pub_str  = pub_el.text if pub_el is not None else ""
+
+            try:
+                pub_dt = parsedate_to_datetime(pub_str).astimezone(timezone.utc)
+                if pub_dt < week_ago_dt:
+                    continue
+                pub_label = pub_dt.strftime("%Y.%m.%d")
+            except:
+                continue
+
+            if not title:
+                continue
+            if is_blocked_domain(real_link or link):
+                continue
+            if not is_relevant_article(keyword, title, desc_raw):
+                continue
+
+            score = score_article(keyword, title, desc_raw)
+            print(f"  [GOOGLE/{keyword}] ({score}) {title[:50]}...")
+
+            image, snippet = get_article_info(real_link or link)
+
+            desc = desc_raw
+            if not desc or normalize_text(desc).startswith(normalize_text(title)):
+                desc = snippet or ""
+
+            articles.append({
+                "title": title, "press": press, "link": link,
+                "summary": desc, "date": pub_label,
+                "score": score, "keyword": keyword, "image": image
+            })
+
+        articles.sort(key=lambda x: x["score"], reverse=True)
+        articles = dedupe_articles(articles)
+        articles = [a for a in articles if a["score"] >= MIN_ARTICLE_SCORE]
+        return articles[:3]
+
+    except Exception as e:
+        print(f"  [ERROR] Google {keyword} 실패: {e}")
+        return []
 
 # ── 핵심 요약 ────────────────────────────────────────────────
 POLICY_KEYWORDS = [
