@@ -729,7 +729,7 @@ def to_html(all_articles):
           </td>
           <td width="33%" style="text-align:center;padding:3px 0;">
             <div style="font-size:14px;font-weight:700;color:#93c5fd;">{week_label}</div>
-            <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">이번 주 호</div>
+            <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">이번 주차</div>
           </td>
         </tr>
       </table>
@@ -748,7 +748,7 @@ def to_html(all_articles):
   <tr>
     <td style="padding:12px 32px 8px 32px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-             style="background-color:#f8f7ff;border-radius:18px;overflow:hidden;">
+             style="background-color:#edeaff;border-radius:18px;overflow:hidden;">
         <tr>
           <td style="padding:18px 20px 10px 20px;">
             <div style="font-size:16px;font-weight:800;color:#1e1b4b;margin-bottom:14px;">&#128269; 핵심 요약</div>
@@ -781,8 +781,8 @@ def to_html(all_articles):
   <!-- 푸터 -->
   <tr>
     <td style="background-color:#1e1e42;padding:18px 32px;text-align:center;border-radius:0 0 20px 20px;">
-      <div style="font-size:14px;font-weight:900;color:#ffffff;margin-bottom:6px;">
-        &#128241; 앱 마켓 <span style="color:#a78bfa;">뉴스레터</span>
+      <div style="font-size:15px;font-weight:900;color:#ffffff;margin-bottom:6px;">
+        &#128241; 주간 앱 마켓 <span style="color:#a78bfa;">뉴스레터</span>
       </div>
       <div style="font-size:11px;color:rgba(180,200,240,0.65);line-height:1.9;">
         매주 월요일 발행 &middot; 구독 문의: hj@kisa.or.kr<br>
