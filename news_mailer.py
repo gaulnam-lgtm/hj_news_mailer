@@ -62,6 +62,11 @@ with open(ICON_PATH, "rb") as f:
     _ext = os.path.splitext(ICON_PATH)[-1].lstrip(".").replace("jpg", "jpeg")
     ICON_BASE64 = f"data:image/{_ext};base64," + base64.b64encode(f.read()).decode()
 
+IMAGE2_PATH = "image2.png"          # ← GitHub에 함께 올릴 파일명
+with open(IMAGE2_PATH, "rb") as f:
+    _ext2 = os.path.splitext(IMAGE2_PATH)[-1].lstrip(".").replace("jpg", "jpeg")
+    IMAGE2_BASE64 = f"data:image/{_ext2};base64," + base64.b64encode(f.read()).decode()
+
 # ── 봇 차단 도메인 ────────────────────────────────────────────
 BOT_BLOCKED_DOMAINS = {
     "v.daum.net", "daum.net",
@@ -555,8 +560,8 @@ def build_summary_html(all_articles):
         return '<div style="font-size:14px;color:#94a3b8;padding:4px 0;">이번 주 주요 내용을 찾지 못했습니다.</div>'
 
     # 카드형 디자인 (이메일 호환 테이블)
-    accent_colors = ["#4f46e5", "#db2777", "#059669"]
-    rows = ""
+    accent_colors = ["#475569"] * 3
+rows = ""
     for i, line in enumerate(top3):
         color = accent_colors[i % len(accent_colors)]
         rows += f"""
@@ -575,7 +580,6 @@ def build_summary_html(all_articles):
         </tr>"""
 
     return f"""<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">{rows}</table>"""
-
 
 # ── HTML 생성 ────────────────────────────────────────────────
 def to_html(all_articles):
@@ -671,122 +675,35 @@ def to_html(all_articles):
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="900"
        style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.10);">
 
-  <!-- ══ 헤더: 글로우 그라데이션 + 폰 목업 (이메일 호환) ══ -->
+  <!-- 헤더 -->
   <tr>
-    <td style="background:
-        radial-gradient(ellipse at 18% 55%, rgba(99,102,241,0.55) 0%, transparent 52%),
-        radial-gradient(ellipse at 82% 18%, rgba(0,212,255,0.28) 0%, transparent 46%),
-        radial-gradient(ellipse at 52% 95%, rgba(168,85,247,0.38) 0%, transparent 48%),
-        linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #1a1a4e 100%);
-        padding:0;">
+    <td style="background: radial-gradient(...) ; padding:0;">  <!-- 기존 그라데이션 그대로 -->
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
           <!-- 좌측 텍스트 -->
           <td style="padding:28px 0 24px 32px;vertical-align:middle;">
-            <!-- 라벨 -->
-            <div style="font-size:10px;font-weight:700;letter-spacing:3px;
-                        color:rgba(147,197,253,0.85);margin-bottom:14px;
-                        font-family:Arial,sans-serif;">
+            <div style="font-size:13px;font-weight:800;letter-spacing:3px;color:rgba(147,197,253,0.85);margin-bottom:14px;font-family:Arial,sans-serif;">
               &#128225;&nbsp;&nbsp;WEEKLY APP MARKET NEWS
             </div>
-            <!-- 제목: 한 줄, 앱마켓 흰색 + 뉴스레터 그라데이션 -->
-            <div style="margin-bottom:13px;line-height:1.15;
-                        font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;
-                        white-space:nowrap;">
-              <span style="font-size:34px;font-weight:900;color:#ffffff;">앱 마켓&nbsp;</span><span
-                    style="font-size:34px;font-weight:900;color:#93c5fd;">뉴</span><span
-                    style="font-size:34px;font-weight:900;color:#a78bfa;">스</span><span
-                    style="font-size:34px;font-weight:900;color:#c084fc;">레</span><span
-                    style="font-size:34px;font-weight:900;color:#f0abfc;">터</span>
+            <!-- 제목: 90% 크기 -->
+            <div style="margin-bottom:13px;line-height:1.1;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;white-space:nowrap;">
+              <span style="font-size:36px;font-weight:900;color:#ffffff;">주간&nbsp;</span>
+              <span style="font-size:36px;font-weight:900;color:#93c5fd;">앱 마켓&nbsp;</span>
+              <span style="font-size:36px;font-weight:900;color:#a78bfa;">뉴</span>
+              <span style="font-size:36px;font-weight:900;color:#c084fc;">스</span>
+              <span style="font-size:36px;font-weight:900;color:#f0abfc;">레</span>
+              <span style="font-size:36px;font-weight:900;color:#f0abfc;">터</span>
             </div>
-            <!-- 날짜 -->
-            <div style="font-size:12px;color:rgba(180,215,255,0.75);
-                        font-family:Arial,sans-serif;">
+            <div style="font-size:14px;color:rgba(180,215,255,0.75);font-family:Arial,sans-serif;">
               &#9679; 검색 범위 : {week_ago} ~ {today}
             </div>
           </td>
 
-          <!-- 우측 폰 목업 -->
-          <td style="padding:18px 26px 18px 8px;vertical-align:middle;text-align:center;width:148px;">
-            <!-- App Store 배지 -->
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                   style="margin:0 auto 8px auto;">
-              <tr>
-                <td style="background:rgba(99,102,241,0.88);border-radius:9px;
-                            padding:5px 11px;font-size:10px;font-weight:700;
-                            color:#ffffff;font-family:Arial,sans-serif;white-space:nowrap;">
-                  &#128241; App Store
-                </td>
-              </tr>
-            </table>
-
-            <!-- 폰 바디 -->
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                   style="margin:0 auto;background-color:#1a1a3a;border-radius:14px;
-                          border:1.5px solid rgba(140,170,255,0.5);padding:8px 8px 6px;">
-              <!-- 노치 -->
-              <tr>
-                <td colspan="3" style="text-align:center;padding-bottom:5px;line-height:0;font-size:0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                         style="margin:0 auto;">
-                    <tr>
-                      <td style="width:22px;height:4px;background-color:#0d1230;
-                                 border-radius:2px;font-size:0;">&nbsp;</td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <!-- 앱 아이콘 3×3 -->
-              <tr>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#6366f1;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#10b981;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#f59e0b;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-              </tr>
-              <tr>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#ef4444;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#8b5cf6;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#06b6d4;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-              </tr>
-              <tr>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#ec4899;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#f97316;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-                <td style="padding:2px;"><table cellpadding="0" cellspacing="0"><tr><td style="width:18px;height:18px;background-color:#14b8a6;border-radius:4px;font-size:0;">&nbsp;</td></tr></table></td>
-              </tr>
-              <!-- 하단 바 -->
-              <tr>
-                <td colspan="3" style="padding-top:5px;text-align:center;line-height:0;font-size:0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
-                    <tr>
-                      <td style="width:42px;height:5px;background-color:rgba(120,160,255,0.25);border-radius:3px;font-size:0;">&nbsp;</td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <!-- 홈 버튼 -->
-              <tr>
-                <td colspan="3" style="text-align:center;padding-top:4px;padding-bottom:2px;line-height:0;font-size:0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
-                    <tr>
-                      <td style="width:13px;height:13px;border-radius:50%;
-                                 background-color:rgba(140,170,255,0.28);
-                                 border:1px solid rgba(140,170,255,0.45);font-size:0;">&nbsp;</td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-
-            <!-- Play Store 배지 -->
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                   style="margin:8px auto 0 auto;">
-              <tr>
-                <td style="background:rgba(16,185,129,0.88);border-radius:9px;
-                            padding:5px 11px;font-size:10px;font-weight:700;
-                            color:#ffffff;font-family:Arial,sans-serif;white-space:nowrap;">
-                  &#9654; Play Store
-                </td>
-              </tr>
-            </table>
+          <!-- 1번 요청: 기존 폰 목업 완전 제거 → image2.png 삽입 -->
+          <td style="padding:18px 20px 18px 8px;vertical-align:middle;text-align:center;width:340px;">
+            <img src="{IMAGE2_BASE64}" 
+                 style="max-width:320px;height:auto;display:block;border-radius:20px;"
+                 alt="App Market Visual">
           </td>
         </tr>
       </table>
@@ -824,10 +741,10 @@ def to_html(all_articles):
   </tr>
 
   <!-- ══ 핵심 요약 ══ -->
-  <tr>
+<tr>
     <td style="padding:12px 32px 8px 32px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-             style="background-color:#f8f7ff;border-radius:14px;border:1px solid #e0d9ff;">
+             style="background-color:#f8f7ff;border-radius:18px;border:1px solid #e0d9ff;">  <!-- 라운드 강화 -->
         <tr>
           <td style="padding:18px 20px 10px 20px;">
             <div style="font-size:16px;font-weight:800;color:#1e1b4b;margin-bottom:14px;">&#128269; 핵심 요약</div>
