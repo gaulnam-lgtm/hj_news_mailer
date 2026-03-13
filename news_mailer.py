@@ -615,36 +615,43 @@ def to_html(all_articles):
             <tr>
               <td style="padding:0 32px 10px 32px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-                       style="border:1.5px solid #e5e7eb;border-radius:14px;overflow:hidden;background-color:#ffffff;">
+                       style="background-color:#d1d5db;border-radius:14px;">
                   <tr>
-                    <td width="5" style="background-color:{color};font-size:0;">&nbsp;</td>
-                    {image_td}
-                    <td style="padding:12px 18px 12px {text_pl};vertical-align:top;background-color:#ffffff;">
-                      <div style="margin-bottom:6px;">
-                        <span style="display:inline-block;background-color:{tag_bg};color:{color};
-                                     font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;">{kw}</span>
-                      </div>
-                      <div style="font-size:16px;line-height:24px;color:#111827;font-weight:800;
-                                  font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
-                        {a['title']}
-                      </div>
-                      <div style="padding-top:5px;font-size:13px;line-height:21px;color:#4b5563;">
-                        {summary_text}
-                      </div>
-                      <div style="padding-top:8px;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                          <tr>
-                            <td style="font-size:11px;color:#9ca3af;vertical-align:middle;">
-                              {a['date']}{(' &middot; ' + a['press']) if a.get('press') else ''}
-                            </td>
-                            <td style="text-align:right;vertical-align:middle;">
-                              <a href="{a['link']}" style="display:inline-block;color:#ffffff;text-decoration:none;
-                                 font-size:12px;font-weight:700;padding:5px 12px;border-radius:7px;
-                                 background-color:#374151;">&#128279; 원문보기</a>
-                            </td>
-                          </tr>
-                        </table>
-                      </div>
+                    <td style="padding:1px;border-radius:14px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+                             style="border-collapse:separate;background-color:#ffffff;border:1px solid #d1d5db;border-radius:13px;overflow:hidden;">
+                        <tr>
+                          <td width="5" style="background-color:{color};font-size:0;">&nbsp;</td>
+                          {image_td}
+                          <td style="padding:12px 18px 12px {text_pl};vertical-align:top;background-color:#ffffff;">
+                            <div style="margin-bottom:6px;">
+                              <span style="display:inline-block;background-color:{tag_bg};color:{color};
+                                           font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;">{kw}</span>
+                            </div>
+                            <div style="font-size:16px;line-height:24px;color:#111827;font-weight:800;
+                                        font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
+                              {a['title']}
+                            </div>
+                            <div style="padding-top:5px;font-size:13px;line-height:21px;color:#4b5563;">
+                              {summary_text}
+                            </div>
+                            <div style="padding-top:8px;">
+                              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                  <td style="font-size:11px;color:#9ca3af;vertical-align:middle;">
+                                    {a['date']}{(' &middot; ' + a['press']) if a.get('press') else ''}
+                                  </td>
+                                  <td style="text-align:right;vertical-align:middle;">
+                                    <a href="{a['link']}" style="display:inline-block;color:#ffffff;text-decoration:none;
+                                       font-size:12px;font-weight:700;padding:5px 12px;border-radius:7px;
+                                       background-color:#374151;">&#128279; 원문보기</a>
+                                  </td>
+                                </tr>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
                     </td>
                   </tr>
                 </table>
@@ -677,12 +684,7 @@ def to_html(all_articles):
               &#128225;&nbsp;&nbsp;WEEKLY APP MARKET NEWS
             </div>
             <div style="margin-bottom:13px;line-height:1.1;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;white-space:nowrap;">
-              <span style="font-size:36px;font-weight:900;color:#ffffff;">주간&nbsp;</span>
-              <span style="font-size:36px;font-weight:900;color:#93c5fd;">앱 마켓&nbsp;</span>
-              <span style="font-size:36px;font-weight:900;color:#a78bfa;">뉴</span>
-              <span style="font-size:36px;font-weight:900;color:#c084fc;">스</span>
-              <span style="font-size:36px;font-weight:900;color:#f0abfc;">레</span>
-              <span style="font-size:36px;font-weight:900;color:#f0abfc;">터</span>
+              <span style="font-size:36px;font-weight:900;color:#ffffff;">주간 앱 마켓 뉴스레터</span>
             </div>
             <div style="font-size:14px;color:rgba(180,215,255,0.75);font-family:Arial,sans-serif;">
               &#9679; 검색 범위 : {week_ago} ~ {today}
