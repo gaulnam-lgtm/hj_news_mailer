@@ -713,7 +713,7 @@ def to_html(all_articles):
           <td style="padding:14px 20px 14px 8px;vertical-align:middle;
                      text-align:center;width:340px;">
             <img src="{IMAGE2_BASE64}"
-                 style="max-width:282px;height:auto;display:block;border-radius:20px;"
+                 style="max-width:260px;height:auto;display:block;border-radius:20px;"
                  alt="App Market Visual">
           </td>
         </tr>
