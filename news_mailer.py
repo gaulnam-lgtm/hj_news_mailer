@@ -723,6 +723,10 @@ def to_html(all_articles):
             <table role="presentation" cellpadding="0" cellspacing="0"
                    border="0" width="100%">
               <tr>
+                <td width="33%" style="text-align:center;padding:4px 0;">
+                  <div style="font-size:14px;font-weight:700;color:#ffffff;">{week_label}</div>
+                  <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">월주차</div>
+                </td>
                 <td width="33%" style="text-align:center;padding:4px 0;
                                         border-right:1px solid rgba(255,255,255,0.1);">
                   <div style="font-size:15px;font-weight:700;color:#ffffff;">{article_count}</div>
@@ -732,10 +736,6 @@ def to_html(all_articles):
                                         border-right:1px solid rgba(255,255,255,0.1);">
                   <div style="font-size:15px;font-weight:700;color:#ffffff;">{issue_count}</div>
                   <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">검색 키워드</div>
-                </td>
-                <td width="33%" style="text-align:center;padding:4px 0;">
-                  <div style="font-size:14px;font-weight:700;color:#ffffff;">{week_label}</div>
-                  <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">월주차</div>
                 </td>
               </tr>
             </table>
