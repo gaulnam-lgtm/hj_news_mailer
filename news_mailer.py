@@ -685,7 +685,7 @@ def to_html(all_articles):
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="900"
        style="max-width:900px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.10);">
 
-  <!-- 헤더 + image2.png -->
+<!-- ══ 헤더 + 통계 바 통합 ══ -->
   <tr>
     <td style="background:
         radial-gradient(ellipse at 18% 55%, rgba(99,102,241,0.55) 0%, transparent 52%),
@@ -694,44 +694,62 @@ def to_html(all_articles):
         linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #1a1a4e 100%);
         padding:0;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+
+        <!-- 윗줄: 라벨 + 이미지 타이틀 + 폰 목업 -->
         <tr>
-          <td style="padding:28px 0 24px 32px;vertical-align:middle;">
-            <div style="font-size:13px;font-weight:800;letter-spacing:3px;color:rgba(147,197,253,0.85);margin-bottom:14px;font-family:Arial,sans-serif;">
+          <td style="padding:28px 0 16px 32px;vertical-align:middle;">
+            <!-- WEEKLY 라벨 -->
+            <div style="font-size:13px;font-weight:800;letter-spacing:3px;
+                        color:rgba(147,197,253,0.85);margin-bottom:14px;
+                        font-family:Arial,sans-serif;">
               &#128225;&nbsp;&nbsp;WEEKLY APP MARKET NEWS
             </div>
-            <div style="margin-bottom:13px;line-height:1.1;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;white-space:nowrap;">
-              <span style="font-size:36px;font-weight:900;color:#ffffff;">주간 앱 마켓 뉴스레터</span>
+            <!-- 타이틀 이미지 (image1.png) -->
+            <div style="margin-bottom:14px;">
+              <img src="https://raw.githubusercontent.com/[깃허브계정]/[저장소명]/main/image1.png"
+                   height="70"
+                   style="height:70px;width:auto;display:block;" alt="주간 앱 마켓 뉴스레터">
             </div>
+            <!-- 날짜 -->
             <div style="font-size:14px;color:rgba(180,215,255,0.75);font-family:Arial,sans-serif;">
               &#9679; 검색 범위 : {week_ago} ~ {today}
             </div>
           </td>
-          <td style="padding:18px 20px 18px 8px;vertical-align:middle;text-align:center;width:340px;">
-            <img src="{IMAGE2_BASE64}" style="max-width:320px;height:auto;display:block;border-radius:20px;" alt="App Market Visual">
+          <!-- 우측 폰 목업 이미지 -->
+          <td style="padding:18px 20px 18px 8px;vertical-align:middle;
+                     text-align:center;width:340px;">
+            <img src="{IMAGE2_BASE64}"
+                 style="max-width:320px;height:auto;display:block;border-radius:20px;"
+                 alt="App Market Visual">
           </td>
         </tr>
-      </table>
-    </td>
-  </tr>
 
-  <!-- 통계 바 -->
-  <tr>
-    <td style="background-color:#1e1e42;padding:7px 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <!-- 아랫줄: 통계 바 (헤더 배경 안에 통합) -->
         <tr>
-          <td width="33%" style="text-align:center;padding:3px 0;border-right:1px solid rgba(255,255,255,0.1);">
-            <div style="font-size:15px;font-weight:700;color:#93c5fd;">{article_count}</div>
-            <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">주요 기사</div>
-          </td>
-          <td width="33%" style="text-align:center;padding:3px 0;border-right:1px solid rgba(255,255,255,0.1);">
-            <div style="font-size:15px;font-weight:700;color:#93c5fd;">{issue_count}</div>
-            <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">핵심 이슈</div>
-          </td>
-          <td width="33%" style="text-align:center;padding:3px 0;">
-            <div style="font-size:14px;font-weight:700;color:#93c5fd;">{week_label}</div>
-            <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">이번 주차</div>
+          <td colspan="2" style="padding:0 0 18px 0;
+                                  border-top:1px solid rgba(255,255,255,0.08);">
+            <table role="presentation" cellpadding="0" cellspacing="0"
+                   border="0" width="100%">
+              <tr>
+                <td width="33%" style="text-align:center;padding:10px 0;
+                                        border-right:1px solid rgba(255,255,255,0.1);">
+                  <div style="font-size:15px;font-weight:700;color:#93c5fd;">{article_count}</div>
+                  <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">주요 기사</div>
+                </td>
+                <td width="33%" style="text-align:center;padding:10px 0;
+                                        border-right:1px solid rgba(255,255,255,0.1);">
+                  <div style="font-size:15px;font-weight:700;color:#93c5fd;">{issue_count}</div>
+                  <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">핵심 이슈</div>
+                </td>
+                <td width="33%" style="text-align:center;padding:10px 0;">
+                  <div style="font-size:14px;font-weight:700;color:#93c5fd;">{week_label}</div>
+                  <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">이번 주차</div>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
+
       </table>
     </td>
   </tr>
