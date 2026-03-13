@@ -704,7 +704,7 @@ def to_html(all_articles):
             <div style="margin-bottom:11px;">
               <img src="{IMAGE1_BASE64}"
                    height="56"
-                   style="height:56px;width:auto;display:block;" alt="주간 앱 마켓 뉴스레터">
+                   style="height:62px;width:auto;display:block;" alt="주간 앱 마켓 뉴스레터">
             </div>
             <div style="font-size:14px;color:rgba(180,215,255,0.75);font-family:Arial,sans-serif;">
               &#9679; 검색 범위 : {week_ago} ~ {today}
@@ -713,7 +713,7 @@ def to_html(all_articles):
           <td style="padding:14px 20px 14px 8px;vertical-align:middle;
                      text-align:center;width:340px;">
             <img src="{IMAGE2_BASE64}"
-                 style="max-width:256px;height:auto;display:block;border-radius:20px;"
+                 style="max-width:282px;height:auto;display:block;border-radius:20px;"
                  alt="App Market Visual">
           </td>
         </tr>
@@ -725,17 +725,17 @@ def to_html(all_articles):
               <tr>
                 <td width="33%" style="text-align:center;padding:4px 0;
                                         border-right:1px solid rgba(255,255,255,0.1);">
-                  <div style="font-size:15px;font-weight:700;color:#93c5fd;">{article_count}</div>
-                  <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">주요 기사</div>
+                  <div style="font-size:15px;font-weight:700;color:#ffffff;">{article_count}</div>
+                  <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">기사 개수</div>
                 </td>
                 <td width="33%" style="text-align:center;padding:4px 0;
                                         border-right:1px solid rgba(255,255,255,0.1);">
-                  <div style="font-size:15px;font-weight:700;color:#93c5fd;">{issue_count}</div>
-                  <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">핵심 이슈</div>
+                  <div style="font-size:15px;font-weight:700;color:#ffffff;">{issue_count}</div>
+                  <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">검색 키워드</div>
                 </td>
                 <td width="33%" style="text-align:center;padding:4px 0;">
-                  <div style="font-size:14px;font-weight:700;color:#93c5fd;">{week_label}</div>
-                  <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">이번 주차</div>
+                  <div style="font-size:14px;font-weight:700;color:#ffffff;">{week_label}</div>
+                  <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">월주차</div>
                 </td>
               </tr>
             </table>
