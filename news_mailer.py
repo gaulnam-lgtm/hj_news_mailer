@@ -57,10 +57,10 @@ GOOGLEBOT_UA = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
                 "(compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
 
 # ── 이미지 Base64 (GitHub 업로드용) ─────────────────────────
-ICON_PATH = "icon.png"
-with open(ICON_PATH, "rb") as f:
-    _ext = os.path.splitext(ICON_PATH)[-1].lstrip(".").replace("jpg", "jpeg")
-    ICON_BASE64 = f"data:image/{_ext};base64," + base64.b64encode(f.read()).decode()
+IMAGE1_PATH = "image1.png"
+with open(IMAGE1_PATH, "rb") as f:
+    _ext1 = os.path.splitext(IMAGE1_PATH)[-1].lstrip(".").replace("jpg", "jpeg")
+    IMAGE1_BASE64 = f"data:image/{_ext1};base64," + base64.b64encode(f.read()).decode()
 
 IMAGE2_PATH = "image2.png"
 with open(IMAGE2_PATH, "rb") as f:
@@ -706,7 +706,7 @@ def to_html(all_articles):
             </div>
             <!-- 타이틀 이미지 (image1.png) -->
             <div style="margin-bottom:14px;">
-              <img src="https://raw.githubusercontent.com/[깃허브계정]/[저장소명]/main/image1.png"
+              <img src="{IMAGE1_BASE64}"
                    height="70"
                    style="height:70px;width:auto;display:block;" alt="주간 앱 마켓 뉴스레터">
             </div>
@@ -726,12 +726,12 @@ def to_html(all_articles):
 
         <!-- 아랫줄: 통계 바 (헤더 배경 안에 통합) -->
         <tr>
-          <td colspan="2" style="padding:0 0 18px 0;
-                                  border-top:1px solid rgba(255,255,255,0.08);">
+          <td colspan="2" style="padding:0 0 6px 0;
+                        border-top:1px solid rgba(255,255,255,0.08);">
             <table role="presentation" cellpadding="0" cellspacing="0"
                    border="0" width="100%">
               <tr>
-                <td width="33%" style="text-align:center;padding:10px 0;
+                <td width="33%" style="text-align:center;padding:5px 0;
                                         border-right:1px solid rgba(255,255,255,0.1);">
                   <div style="font-size:15px;font-weight:700;color:#93c5fd;">{article_count}</div>
                   <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">주요 기사</div>
