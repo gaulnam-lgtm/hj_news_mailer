@@ -713,7 +713,7 @@ def to_html(all_articles):
           <td style="padding:14px 20px 14px 8px;vertical-align:middle;
                      text-align:center;width:340px;">
             <img src="{IMAGE2_BASE64}"
-                 style="max-width:260px;height:auto;display:block;border-radius:20px;"
+                 style="max-width:250px;height:auto;display:block;border-radius:20px;"
                  alt="App Market Visual">
           </td>
         </tr>
@@ -818,7 +818,7 @@ def send_mail(html):
     recipients = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[앱 마켓 뉴스 레터] {today}"
-    msg["From"] = f"KISA(김형진) <{GMAIL_ID}@gmail.com>"
+   msg["From"] = f"KISA(김형진) <{GMAIL_ID}>"
     msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(html, "html", "utf-8"))
 
