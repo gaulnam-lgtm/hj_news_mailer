@@ -294,7 +294,49 @@ def build_search_query(keyword):
     }
     return query_map.get(keyword, keyword)
 
-# STRICT_CONTEXT_KEYWORDS, POLICY_HINTS, is_relevant_article, score_article 함수도 원본 그대로
+STRICT_CONTEXT_KEYWORDS = ["아웃링크", "아웃링크결제", "웹결제", "구독경제", "앱생태계", "앱개발사"]
+POLICY_HINTS = [
+    "인앱결제", "외부결제", "제3자결제", "안티스티어링", "사이드로딩",
+    "수수료", "정책", "규제", "법안", "법", "판결", "소송", "심사",
+    "허용", "금지", "강제", "방통위", "공정위", "디지털시장법",
+    "dma", "앱스토어", "플레이스토어", "애플", "구글", "원스토어", "갤럭시스토어"
+]
+
+def is_relevant_article(keyword, title, desc):
+    text = normalize_text(f"{title} {desc}")
+    kw = normalize_text(keyword)
+    if kw not in text:
+        return False
+    for bad in KEYWORDS_EXCLUDE:
+        if normalize_text(bad) in text:
+            return False
+    if any(sk in kw for sk in STRICT_CONTEXT_KEYWORDS):
+        has_platform = any(normalize_text(p) in text for p in KEYWORDS_PLATFORM)
+        has_policy = any(normalize_text(p) in text for p in POLICY_HINTS)
+        if not (has_platform or has_policy):
+            return False
+    return True
+
+def score_article(keyword, title, desc):
+    text = normalize_text(f"{title} {desc}")
+    kw = normalize_text(keyword)
+    score = 0
+    if kw in normalize_text(title): score += 5
+    if kw in normalize_text(desc):  score += 3
+    for p in KEYWORDS_PLATFORM:
+        if normalize_text(p) in text: score += 2
+    for p in POLICY_HINTS:
+        if normalize_text(p) in text: score += 1
+    strong = [
+        "인앱결제", "외부결제", "앱스토어", "플레이스토어", "애플", "구글",
+        "수수료", "정책", "규제", "소송", "방통위", "공정위",
+        "안티스티어링", "사이드로딩", "디지털시장법"
+    ]
+    title_norm = normalize_text(title)
+    for w in strong:
+        if normalize_text(w) in title_norm: score += 2
+    return score
+
 
 def fetch_naver_articles(keyword):
     query = build_search_query(keyword)
