@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import parsedate_to_datetime
+from email.utils import parsedate_to_datetime, formataddr
 from urllib.request import Request, urlopen
 from urllib.parse import quote, urlparse
 from collections import defaultdict
@@ -818,7 +819,7 @@ def send_mail(html):
     recipients = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[앱 마켓 뉴스 레터] {today}"
-    msg["From"] = f"KISA(김형진) <{GMAIL_ID}>"
+    msg["From"] = formataddr(("KISA(김형진)", GMAIL_ID))
     msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(html, "html", "utf-8"))
 
