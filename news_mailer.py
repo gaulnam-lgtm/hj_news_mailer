@@ -90,6 +90,21 @@ def normalize_text(text):
 def clean_spaces(text):
     return re.sub(r"\s+", " ", (text or "")).strip()
 
+
+def sanitize_summary_line(text: str) -> str:
+    """핵심 요약 문장 앞뒤의 가비지 문자/공백을 정리."""
+    text = clean_spaces(text or "")
+    if not text:
+        return ""
+
+    # BOM/zero-width/제어문자 제거
+    text = re.sub(r"[﻿​‌‍⁠ ]", "", text)
+    text = re.sub(r"^[\s\-–—•·ㆍ※▶▷◆◇□■]+", "", text)
+
+    # 앞에 잘못 붙은 한 글자 가비지(예: '히 미국은') 제거
+    text = re.sub(r'^[가-힣]\s+(?=[가-힣A-Za-z0-9(])', '', text)
+    return text.strip()
+
 def get_domain(url):
     m = re.search(r"https?://(?:www\.)?([^/]+)", url or "")
     return m.group(1).lower() if m else ""
@@ -503,7 +518,7 @@ def extract_best_sentence(text: str, title: str = "") -> str:
         scored.append((sc, s))
     scored.sort(key=lambda x: -x[0])
 
-    best = scored[0][1]
+    best = sanitize_summary_line(scored[0][1])
     return _trim(best, 70)
 
 
@@ -537,7 +552,8 @@ def build_summary_html(all_articles):
     top3 = []
     seen2 = set()
     for _, line in items:
-        if line in seen2:
+        line = sanitize_summary_line(line)
+        if not line or line in seen2:
             continue
         seen2.add(line)
         top3.append(line)
@@ -615,43 +631,36 @@ def to_html(all_articles):
             <tr>
               <td style="padding:0 32px 10px 32px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-                       style="background-color:#d1d5db;border-radius:14px;">
+                       style="border:1.5px solid #e5e7eb;border-radius:14px;overflow:hidden;background-color:#ffffff;">
                   <tr>
-                    <td style="padding:1px;border-radius:14px;">
-                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-                             style="border-collapse:separate;background-color:#ffffff;border:1px solid #d1d5db;border-radius:13px;overflow:hidden;">
-                        <tr>
-                          <td width="5" style="background-color:{color};font-size:0;">&nbsp;</td>
-                          {image_td}
-                          <td style="padding:12px 18px 12px {text_pl};vertical-align:top;background-color:#ffffff;">
-                            <div style="margin-bottom:6px;">
-                              <span style="display:inline-block;background-color:{tag_bg};color:{color};
-                                           font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;">{kw}</span>
-                            </div>
-                            <div style="font-size:16px;line-height:24px;color:#111827;font-weight:800;
-                                        font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
-                              {a['title']}
-                            </div>
-                            <div style="padding-top:5px;font-size:13px;line-height:21px;color:#4b5563;">
-                              {summary_text}
-                            </div>
-                            <div style="padding-top:8px;">
-                              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                                <tr>
-                                  <td style="font-size:11px;color:#9ca3af;vertical-align:middle;">
-                                    {a['date']}{(' &middot; ' + a['press']) if a.get('press') else ''}
-                                  </td>
-                                  <td style="text-align:right;vertical-align:middle;">
-                                    <a href="{a['link']}" style="display:inline-block;color:#ffffff;text-decoration:none;
-                                       font-size:12px;font-weight:700;padding:5px 12px;border-radius:7px;
-                                       background-color:#374151;">&#128279; 원문보기</a>
-                                  </td>
-                                </tr>
-                              </table>
-                            </div>
-                          </td>
-                        </tr>
-                      </table>
+                    <td width="5" style="background-color:{color};font-size:0;">&nbsp;</td>
+                    {image_td}
+                    <td style="padding:12px 18px 12px {text_pl};vertical-align:top;background-color:#ffffff;">
+                      <div style="margin-bottom:6px;">
+                        <span style="display:inline-block;background-color:{tag_bg};color:{color};
+                                     font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;">{kw}</span>
+                      </div>
+                      <div style="font-size:16px;line-height:24px;color:#111827;font-weight:800;
+                                  font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
+                        {a['title']}
+                      </div>
+                      <div style="padding-top:5px;font-size:13px;line-height:21px;color:#4b5563;">
+                        {summary_text}
+                      </div>
+                      <div style="padding-top:8px;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                          <tr>
+                            <td style="font-size:11px;color:#9ca3af;vertical-align:middle;">
+                              {a['date']}{(' &middot; ' + a['press']) if a.get('press') else ''}
+                            </td>
+                            <td style="text-align:right;vertical-align:middle;">
+                              <a href="{a['link']}" style="display:inline-block;color:#ffffff;text-decoration:none;
+                                 font-size:12px;font-weight:700;padding:5px 12px;border-radius:7px;
+                                 background-color:#374151;">&#128279; 원문보기</a>
+                            </td>
+                          </tr>
+                        </table>
+                      </div>
                     </td>
                   </tr>
                 </table>
@@ -732,7 +741,7 @@ def to_html(all_articles):
   <tr>
     <td style="padding:12px 32px 8px 32px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-             style="background-color:#f8f7ff;border-radius:18px;border:1px solid #e0d9ff;">
+             style="background-color:#f8f7ff;border-radius:18px;overflow:hidden;">
         <tr>
           <td style="padding:18px 20px 10px 20px;">
             <div style="font-size:16px;font-weight:800;color:#1e1b4b;margin-bottom:14px;">&#128269; 핵심 요약</div>
