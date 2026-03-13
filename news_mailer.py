@@ -434,11 +434,49 @@ POLICY_KEYWORDS = [
 ]
 
 def extract_best_sentence(text: str, title: str = "") -> str:
-    # ... (원본 그대로)
+    """summary에서 가장 핵심적인 1문장을 추출. 없으면 title 사용."""
+    text = clean_spaces(text)
+    if not text:
+        return _trim(title, 60) if title else ""
+
+    # 문장 분리 (마침표, 느낌표, 물음표 기준)
+    sents = re.split(r"(?<=[다요죠까네\.!?])\s+", text)
+    sents = [s.strip() for s in sents if len(s.strip()) >= 20]
+
+    # 연결어로 시작하는 문장 제거
+    bad_starts = ("이에 ", "이를 ", "이후 ", "이와 ", "한편 ", "또한 ",
+                  "그러나 ", "하지만 ", "따라서 ", "이같은 ", "이런 ", "이같이 ",
+                  "특히 이", "이 같은", "이어 ")
+    filtered = [s for s in sents if not any(s.startswith(b) for b in bad_starts)]
+    if not filtered:
+        filtered = sents
+
+    if not filtered:
+        return _trim(title, 60)
+
+    # 정책 키워드 포함 문장 우선
+    scored = []
+    for s in filtered:
+        sc = sum(1 for pk in POLICY_KEYWORDS if pk in s)
+        scored.append((sc, s))
+    scored.sort(key=lambda x: -x[0])
+
+    best = scored[0][1]
+    return _trim(best, 70)
+
 
 def _trim(text: str, max_len: int) -> str:
-    # ... (원본 그대로)
-
+    """자연스러운 위치에서 말줄임표 처리."""
+    if len(text) <= max_len:
+        return text
+    # 조사/어미 단위로 자르기
+    cut = text[:max_len]
+    for sep in (" ", ",", "，"):
+        idx = cut.rfind(sep)
+        if idx > max_len * 0.6:
+            cut = cut[:idx]
+            break
+    return cut.rstrip(" ,，.。") + "…"
 def build_summary_html(all_articles):
     items = []
     seen_texts = set()
