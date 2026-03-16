@@ -39,7 +39,8 @@ KEYWORDS_EXCLUDE = json.loads(
     ], ensure_ascii=False))
 )
 
-today_dt = datetime.now(timezone.utc)
+KST = timezone(timedelta(hours=9))
+today_dt = datetime.now(KST)
 today = today_dt.strftime("%Y년 %m월 %d일")
 week_ago_dt = today_dt - timedelta(days=7)
 week_ago = week_ago_dt.strftime("%Y년 %m월 %d일")
