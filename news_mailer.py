@@ -6,8 +6,8 @@ import base64
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.utils import parsedate_to_datetime
 from email.utils import parsedate_to_datetime, formataddr
+from email.header import Header
 from urllib.request import Request, urlopen
 from urllib.parse import quote, urlparse
 from collections import defaultdict
@@ -816,17 +816,18 @@ def to_html(all_articles):
 # ── 메일 발송 ───────────────────────────────────────────────
 def send_mail(html):
     recipients = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[앱 마켓 뉴스 레터] {today}"
-    msg["From"] = formataddr(("KISA(김형진)", GMAIL_ID))
-    msg["To"] = recipients[0]
-    msg.attach(MIMEText(html, "html", "utf-8"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
         smtp.login(GMAIL_ID, GMAIL_PW)
         for recipient in recipients:
-            msg.replace_header("To", recipient)
+            # 수신자마다 새 msg 객체 생성
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"[앱 마켓 뉴스 레터] {today}"
+            msg["From"] = formataddr((str(Header("KISA(김형진)", "utf-8")), f"{GMAIL_ID}@gmail.com"))
+            msg["To"] = recipient
+            msg.attach(MIMEText(html, "html", "utf-8"))
             smtp.sendmail(msg["From"], [recipient], msg.as_string())
+            print(f"  → {recipient} 발송 완료")
 
     print(f"✅ 메일 발송 완료 → {', '.join(recipients)}")
 
