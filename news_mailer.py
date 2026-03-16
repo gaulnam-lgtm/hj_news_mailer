@@ -818,12 +818,14 @@ def send_mail(html):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[앱 마켓 뉴스 레터] {today}"
     msg["From"] = formataddr(("KISA(김형진)", GMAIL_ID))
-    msg["To"] = ", ".join(recipients)
+    msg["To"] = recipients[0]  # 초기값 (replace_header 사용을 위해 필요)
     msg.attach(MIMEText(html, "html", "utf-8"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login(GMAIL_ID, GMAIL_PW)
-        smtp.sendmail(msg["From"], recipients, msg.as_string())
+    smtp.login(GMAIL_ID, GMAIL_PW)
+    for recipient in recipients:
+        msg.replace_header("To", recipient)
+        smtp.sendmail(msg["From"], [recipient], msg.as_string())
     print(f"✅ 메일 발송 완료 → {', '.join(recipients)}")
 
 # ── 실행 ────────────────────────────────────────────────────
