@@ -5,6 +5,9 @@ on:
     types: [cron-trigger]
   workflow_dispatch:           # 수동 실행 버튼도 활성화
 
+env:
+  TZ: Asia/Seoul  # 추가
+
 jobs:
   send-news:
     runs-on: ubuntu-latest
