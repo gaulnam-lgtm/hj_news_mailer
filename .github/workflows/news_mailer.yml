@@ -25,6 +25,7 @@ jobs:
           GMAIL_ID:             ${{ secrets.GMAIL_ID }}
           GMAIL_APP_PASSWORD:   ${{ secrets.GMAIL_APP_PASSWORD }}
           MAIL_TO:              ${{ secrets.MAIL_TO }}
+          MAIL_TO_DAILY: ${{ secrets.MAIL_TO_DAILY }}
           KEYWORDS:             ${{ secrets.KEYWORDS }}
           NAVER_CLIENT_ID:      ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET:  ${{ secrets.NAVER_CLIENT_SECRET }}
