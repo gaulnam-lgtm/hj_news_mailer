@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import smtplib
 import re
@@ -16,7 +17,16 @@ from xml.etree import ElementTree as ET
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
 GMAIL_PW = os.environ["GMAIL_APP_PASSWORD"]
-MAIL_TO = os.environ["MAIL_TO"]
+
+mode = "weekly"
+if "--mode" in sys.argv:
+    mode = sys.argv[sys.argv.index("--mode") + 1]
+
+if mode == "daily":
+    MAIL_TO = os.environ["MAIL_TO_DAILY"]
+else:
+    MAIL_TO = os.environ["MAIL_TO"]
+
 KEYWORDS = json.loads(os.environ["KEYWORDS"])
 NAVER_CLIENT_ID = os.environ["NAVER_CLIENT_ID"]
 NAVER_CLIENT_SECRET = os.environ["NAVER_CLIENT_SECRET"]
