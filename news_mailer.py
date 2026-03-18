@@ -809,12 +809,12 @@ def to_html(all_articles):
   </tr>
 
   <!-- 인사말 -->
-  <tr>
-    <td style="padding:22px 32px 10px 32px;font-size:14px;line-height:22px;color:#475569;">
-      안녕하세요.<br>
-      이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.
-    </td>
-  </tr>
+<tr>
+  <td style="padding:22px 32px 10px 32px;font-size:15px;line-height:22px;color:#1d497c;">
+    <b>안녕하세요.</b><br>
+    최근 일주일간 키워드별 주요 기사를 정리해 공유드립니다.
+  </td>
+</tr>
 
   <!-- 기사 카드 -->
   {cards_html if total_count > 0 else empty_html}
