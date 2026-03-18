@@ -822,7 +822,7 @@ def to_html(all_articles):
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
           <td style="font-size:18px;font-weight:800;color:#0f172a;white-space:nowrap;padding-right:12px;">
-            &#128240; 주요 기사
+            &#128240; 주요 기사<br>
           </td>
           <td width="100%">
             <div style="height:2px;background-color:#e0d9ff;border-radius:2px;"></div>
