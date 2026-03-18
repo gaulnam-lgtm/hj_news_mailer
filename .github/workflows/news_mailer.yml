@@ -4,28 +4,20 @@ on:
   repository_dispatch:
     types: [cron-trigger]
   workflow_dispatch:
-    inputs:
-      mode:
-        description: '발송 모드'
-        required: true
-        default: 'weekly'
-        type: choice
-        options:
-          - weekly
-          - daily
 
 env:
   TZ: Asia/Seoul
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # ← 미리 테스트용 (나중에 지워도 됨)
 
 jobs:
   send-news:
     runs-on: ubuntu-latest
     steps:
       - name: 저장소 체크아웃
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6     # ← v4 → v6 변경
 
       - name: Python 설치
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6 # ← v5 → v6 변경
         with:
           python-version: '3.11'
 
@@ -34,8 +26,8 @@ jobs:
           GMAIL_ID:             ${{ secrets.GMAIL_ID }}
           GMAIL_APP_PASSWORD:   ${{ secrets.GMAIL_APP_PASSWORD }}
           MAIL_TO:              ${{ secrets.MAIL_TO }}
-          MAIL_TO_DAILY:        ${{ secrets.MAIL_TO_DAILY }}
+          MAIL_TO_DAILY: ${{ secrets.MAIL_TO_DAILY }}
           KEYWORDS:             ${{ secrets.KEYWORDS }}
           NAVER_CLIENT_ID:      ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET:  ${{ secrets.NAVER_CLIENT_SECRET }}
-        run: python news_mailer.py --mode ${{ github.event.client_payload.mode || github.event.inputs.mode || 'weekly' }}
+        run: python news_mailer.py --mode ${{ github.event.client_payload.mode || 'weekly' }}
