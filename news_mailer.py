@@ -598,7 +598,6 @@ def build_summary_html(all_articles):
 
 # ── HTML 생성 (5가지 요청 모두 적용) ────────────────────────
 def to_html(all_articles):
-    summary_html = build_summary_html(all_articles)
     palette = ["#4f46e5", "#db2777", "#d97706", "#059669", "#2563eb", "#dc2626", "#7c3aed", "#0891b2"]
     kw_colors = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
 
@@ -760,37 +759,6 @@ def to_html(all_articles):
     <td style="padding:22px 32px 10px 32px;font-size:14px;line-height:22px;color:#475569;">
       안녕하세요.<br>
       이번 주 앱마켓 관련 주요 기사와 핵심 이슈를 정리해 공유드립니다.
-    </td>
-  </tr>
-
-  <!-- 핵심 요약 -->
-  <tr>
-    <td style="padding:12px 32px 8px 32px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
-             style="background-color:#edeaff;border-radius:18px;overflow:hidden;">
-        <tr>
-          <td style="padding:18px 20px 10px 20px;">
-            <div style="font-size:16px;font-weight:800;color:#1e1b4b;margin-bottom:14px;">&#128269; 핵심 요약</div>
-            {summary_html}
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-
-  <!-- 주요 기사 헤더 -->
-  <tr>
-    <td style="padding:20px 32px 10px 32px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-        <tr>
-          <td style="font-size:18px;font-weight:800;color:#0f172a;white-space:nowrap;padding-right:12px;">
-            &#128240; 주요 기사
-          </td>
-          <td width="100%">
-            <div style="height:2px;background-color:#e0d9ff;border-radius:2px;"></div>
-          </td>
-        </tr>
-      </table>
     </td>
   </tr>
 
