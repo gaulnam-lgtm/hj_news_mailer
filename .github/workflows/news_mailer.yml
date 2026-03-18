@@ -16,16 +16,17 @@ on:
 
 env:
   TZ: Asia/Seoul
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # ← Node 24 미리 테스트용 (테스트 완료 후 삭제 가능)
 
 jobs:
   send-news:
     runs-on: ubuntu-latest
     steps:
       - name: 저장소 체크아웃
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6          # v4 → v6 변경 (Node 24 지원)
 
       - name: Python 설치
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6      # v5 → v6 변경 (Node 24 지원)
         with:
           python-version: '3.11'
 
