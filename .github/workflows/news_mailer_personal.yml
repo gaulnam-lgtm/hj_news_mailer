@@ -1,41 +1,30 @@
-name: 뉴스 서치 메일 발송
+name: 개인 뉴스레터 발송
 
 on:
   repository_dispatch:
-    types: [cron-trigger]
+    types: [personal-daily-trigger]   # 앱마켓(cron-trigger)과 구분
   workflow_dispatch:
-    inputs:
-      mode:
-        description: '발송 모드'
-        required: true
-        default: 'daily'               # ← default를 daily로 변경
-        type: choice
-        options:
-          - daily                        # ← daily를 위로 올림
-          - weekly
 
 env:
   TZ: Asia/Seoul
 
 jobs:
-  send-news:
+  send-personal-news:
     runs-on: ubuntu-latest
     steps:
       - name: 저장소 체크아웃
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Python 설치
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: 뉴스 서치 및 메일 발송
+      - name: 개인 뉴스레터 발송
         env:
-          GMAIL_ID:             ${{ secrets.GMAIL_ID }}
-          GMAIL_APP_PASSWORD:   ${{ secrets.GMAIL_APP_PASSWORD }}
-          MAIL_TO:              ${{ secrets.MAIL_TO }}
-          MAIL_TO_DAILY:        ${{ secrets.MAIL_TO_DAILY }}
-          KEYWORDS:             ${{ secrets.KEYWORDS }}
-          NAVER_CLIENT_ID:      ${{ secrets.NAVER_CLIENT_ID }}
-          NAVER_CLIENT_SECRET:  ${{ secrets.NAVER_CLIENT_SECRET }}
-        run: python news_mailer.py --mode ${{ github.event.client_payload.mode || github.event.inputs.mode || 'weekly' }}
+          GMAIL_ID:              ${{ secrets.GMAIL_ID }}
+          GMAIL_APP_PASSWORD:    ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO_PERSONAL:      ${{ secrets.MAIL_TO_PERSONAL }}
+          NAVER_CLIENT_ID:       ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET:   ${{ secrets.NAVER_CLIENT_SECRET }}
+        run: python news_mailer_personal.py
