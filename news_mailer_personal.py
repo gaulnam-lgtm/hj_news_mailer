@@ -47,10 +47,10 @@ BOT_BLOCKED_DOMAINS = {"v.daum.net", "daum.net", "news.nate.com", "nate.com", "n
 
 # ── 헤더/푸터 그라디언트 (따뜻한 3색 배색) ──────────────────
 WARM_GRADIENT = """
-    radial-gradient(ellipse at 10% 60%, rgba(249,99,106,0.65) 0%, transparent 45%),
-    radial-gradient(ellipse at 85% 15%, rgba(163,230,53,0.55) 0%, transparent 45%),
-    radial-gradient(ellipse at 50% 90%, rgba(251,191,36,0.50) 0%, transparent 40%),
-    linear-gradient(135deg, #f9636a 0%, #fbbf24 52%, #a3e635 100%)
+    radial-gradient(ellipse at 10% 55%, rgba(92,194,198,0.60) 0%, transparent 48%),
+    radial-gradient(ellipse at 85% 20%, rgba(212,241,216,0.55) 0%, transparent 45%),
+    radial-gradient(ellipse at 55% 90%, rgba(136,174,210,0.50) 0%, transparent 42%),
+    linear-gradient(135deg, #5CC2C6 0%, #88AED2 50%, #D4F1D8 100%)
 """.strip()
 
 # ── 핵심: 공백 무관 부분 일치 ────────────────────────────────
