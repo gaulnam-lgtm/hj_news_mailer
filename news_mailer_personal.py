@@ -387,12 +387,13 @@ def to_html(all_articles):
   <!-- 헤더 -->
   <tr>
     <td style="background:
-        radial-gradient(ellipse at 18% 55%,rgba(99,102,241,0.55) 0%,transparent 52%),
-        radial-gradient(ellipse at 82% 18%,rgba(0,212,255,0.28) 0%,transparent 46%),
-        linear-gradient(135deg,#0f0c29 0%,#302b63 55%,#1a1a4e 100%);
+        radial-gradient(ellipse at 15% 60%, rgba(255,180,50,0.55) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255,100,80,0.40) 0%, transparent 48%),
+        radial-gradient(ellipse at 55% 95%, rgba(255,140,0,0.35) 0%, transparent 46%),
+        linear-gradient(135deg, #ff6b35 0%, #f7931e 45%, #ffb347 100%);
         padding:22px 32px 18px;">
       <div style="font-size:13px;font-weight:800;letter-spacing:3px;
-                  color:rgba(147,197,253,0.85);margin-bottom:10px;font-family:Arial,sans-serif;">
+                  color:rgba(255,255,255,0.90);margin-bottom:10px;font-family:Arial,sans-serif;">
         &#128203;&nbsp;&nbsp;DAILY PERSONAL NEWS
       </div>
       <div style="margin-bottom:10px;">
@@ -400,7 +401,7 @@ def to_html(all_articles):
                      font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;
                      letter-spacing:-0.5px;">일간 개인 뉴스레터</span>
       </div>
-      <div style="font-size:13px;color:rgba(180,215,255,0.75);font-family:Arial,sans-serif;">
+      <div style="font-size:13px;color:rgba(255,255,255,0.85);font-family:Arial,sans-serif;">
         &#9679; {since_str} ~ {today} &nbsp;·&nbsp; 기사 {article_count}건 &nbsp;·&nbsp; 키워드 {len(all_articles)}개
       </div>
     </td>
@@ -418,9 +419,9 @@ def to_html(all_articles):
 
   <!-- 푸터 -->
   <tr>
-    <td style="background:linear-gradient(135deg,#0f0c29 0%,#302b63 55%,#1a1a4e 100%);
+    <td style="background:linear-gradient(135deg,#ff6b35 0%,#f7931e 50%,#ffb347 100%);
                padding:18px 32px;text-align:center;border-radius:0 0 20px 20px;">
-      <div style="font-size:11px;color:rgba(186,230,253,0.75);font-family:Arial,sans-serif;">
+      <div style="font-size:11px;color:rgba(255,255,255,0.85);font-family:Arial,sans-serif;">
         개인 뉴스레터 &middot; 자동 발송 &middot; {today}
       </div>
     </td>
