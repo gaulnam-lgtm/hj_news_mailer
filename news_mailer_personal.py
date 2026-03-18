@@ -2,7 +2,6 @@ import os
 import json
 import smtplib
 import re
-import base64
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -47,11 +46,7 @@ GOOGLEBOT_UA = (
 
 BOT_BLOCKED_DOMAINS = {"v.daum.net", "daum.net", "news.nate.com", "nate.com", "naver.com"}
 
-# ── 이미지 Base64 ─────────────────────────────────────────────
-IMAGE1_PATH = "image1.png"
-with open(IMAGE1_PATH, "rb") as f:
-    _ext1 = os.path.splitext(IMAGE1_PATH)[-1].lstrip(".").replace("jpg", "jpeg")
-    IMAGE1_BASE64 = f"data:image/{_ext1};base64," + base64.b64encode(f.read()).decode()
+
 
 # ── 핵심: 공백 무관 부분 일치 ────────────────────────────────
 def nospace(text: str) -> str:
@@ -401,8 +396,9 @@ def to_html(all_articles):
         &#128203;&nbsp;&nbsp;DAILY PERSONAL NEWS
       </div>
       <div style="margin-bottom:10px;">
-        <img src="{IMAGE1_BASE64}" height="56"
-             style="height:56px;width:auto;display:block;" alt="개인 뉴스레터">
+        <span style="font-size:28px;font-weight:900;color:#ffffff;
+                     font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;
+                     letter-spacing:-0.5px;">일간 개인 뉴스레터</span>
       </div>
       <div style="font-size:13px;color:rgba(180,215,255,0.75);font-family:Arial,sans-serif;">
         &#9679; {since_str} ~ {today} &nbsp;·&nbsp; 기사 {article_count}건 &nbsp;·&nbsp; 키워드 {len(all_articles)}개
