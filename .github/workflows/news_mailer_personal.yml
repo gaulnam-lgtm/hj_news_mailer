@@ -13,18 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 저장소 체크아웃
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6          # v4 → v6 변경
 
       - name: Python 설치
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6      # v5 → v6 변경
         with:
           python-version: '3.11'
 
       - name: 개인 뉴스레터 발송
         env:
-          GMAIL_ID:              ${{ secrets.GMAIL_ID }}
-          GMAIL_APP_PASSWORD:    ${{ secrets.GMAIL_APP_PASSWORD }}
-          MAIL_TO_PERSONAL:      ${{ secrets.MAIL_TO_PERSONAL }}
-          NAVER_CLIENT_ID:       ${{ secrets.NAVER_CLIENT_ID }}
-          NAVER_CLIENT_SECRET:   ${{ secrets.NAVER_CLIENT_SECRET }}
+          GMAIL_ID:             ${{ secrets.GMAIL_ID }}
+          GMAIL_APP_PASSWORD:   ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO_PERSONAL:     ${{ secrets.MAIL_TO_PERSONAL }}
+          NAVER_CLIENT_ID:      ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET:  ${{ secrets.NAVER_CLIENT_SECRET }}
         run: python news_mailer_personal.py
