@@ -227,13 +227,57 @@ def make_absolute_url(base_url: str, img_url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
 
 def is_valid_snippet(text: str) -> bool:
+    text = clean_spaces(strip_html(text or ""))
     if not text or len(text) < 20:
         return False
-    if "google news" in text.lower():
+
+    low = text.lower()
+    bad_phrases = [
+        "google news",
+        "원문 링크를 확인해주세요",
+        "원문링크를 확인해주세요",
+        "기사 원문",
+        "자세한 내용은",
+        "자세한 내용은 원문",
+        "원문에서 확인",
+        "기사 전문",
+        "본문 내용은",
+    ]
+    if any(bp in low for bp in bad_phrases):
         return False
     if text.count(",") + text.count("，") >= 8:
         return False
+    if len(re.findall(r"[가-힣A-Za-z0-9]", text)) < 20:
+        return False
     return True
+
+
+def extract_candidate_snippets_from_html(html: str) -> list:
+    candidates = []
+
+    for cls_pat in [
+        r"<p[^>]*class=[\"']?[^\"']*(?:article|news|content|story|article_txt|articleBody|detail|view|editor)[^\"']*[\"']?[^>]*>(.*?)</p>",
+        r"<div[^>]*class=[\"']?[^\"']*(?:article|news|content|story|article_txt|articleBody|detail|view|editor)[^\"']*[\"']?[^>]*>(.*?)</div>",
+    ]:
+        for m in re.finditer(cls_pat, html, re.IGNORECASE | re.DOTALL):
+            txt = clean_spaces(strip_html(m.group(1)))
+            if is_valid_snippet(txt):
+                candidates.append(txt)
+
+    for m in re.finditer(r'<p[^>]*>(.*?)</p>', html, re.IGNORECASE | re.DOTALL):
+        txt = clean_spaces(strip_html(m.group(1)))
+        if is_valid_snippet(txt):
+            candidates.append(txt)
+
+    cleaned = []
+    seen = set()
+    for txt in candidates:
+        norm = normalize_text(txt)
+        if norm in seen:
+            continue
+        seen.add(norm)
+        cleaned.append(txt)
+    return cleaned
 
 # ── 기사 정보 추출 (기존 그대로) ─────────────────────────────
 def get_article_info(url: str, depth=0) -> tuple:
@@ -285,14 +329,22 @@ def get_article_info(url: str, depth=0) -> tuple:
                 except Exception:
                     pass
 
-        snippet_raw = (
-            extract_meta(html, "og:description")
-            or extract_meta(html, "twitter:description")
-            or extract_meta(html, "description")
-        )
-        snippet = clean_spaces(snippet_raw) if snippet_raw else None
-        if snippet and not is_valid_snippet(snippet):
-            snippet = None
+        snippet = None
+        meta_candidates = [
+            extract_meta(html, "og:description"),
+            extract_meta(html, "twitter:description"),
+            extract_meta(html, "description"),
+        ]
+        for snippet_raw in meta_candidates:
+            cand = clean_spaces(snippet_raw) if snippet_raw else None
+            if cand and is_valid_snippet(cand):
+                snippet = cand
+                break
+
+        if not snippet:
+            html_candidates = extract_candidate_snippets_from_html(html)
+            if html_candidates:
+                snippet = html_candidates[0]
 
         return image, snippet
 
@@ -634,9 +686,11 @@ def to_html(all_articles):
                 image_td = ""
                 text_pl  = "16px"
 
-            summary_text = a.get("summary", "")
+            summary_text = clean_spaces(a.get("summary", ""))
+            if summary_text:
+                summary_text = extract_best_sentence(summary_text, a["title"])
             if not summary_text or normalize_text(summary_text) == normalize_text(a["title"]):
-                summary_text = "원문 링크를 확인해주세요."
+                summary_text = _trim(a["title"], 90)
 
             cards_html += f"""
             <tr>
