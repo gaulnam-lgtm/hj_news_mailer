@@ -1,4 +1,4 @@
-name: 뉴스 서치 메일 발송
+name: 주간 앱 마켓 뉴스레터 발송
 
 on:
   repository_dispatch:
