@@ -46,12 +46,7 @@ GOOGLEBOT_UA = (
 BOT_BLOCKED_DOMAINS = {"v.daum.net", "daum.net", "news.nate.com", "nate.com", "naver.com"}
 
 # ── 헤더/푸터 그라디언트 (따뜻한 3색 배색) ──────────────────
-WARM_GRADIENT = """
-    radial-gradient(ellipse at 10% 55%, rgba(252,202,209,0.70) 0%, transparent 48%),
-    radial-gradient(ellipse at 85% 15%, rgba(81,177,195,0.60) 0%, transparent 45%),
-    radial-gradient(ellipse at 50% 90%, rgba(215,233,237,0.55) 0%, transparent 42%),
-    linear-gradient(135deg, #FCCAD1 0%, #D9C1C3 35%, #51B1C3 68%, #D7E9ED 100%)
-""".strip()
+".strip()
 
 # ── 핵심: 공백 무관 부분 일치 ────────────────────────────────
 def nospace(text: str) -> str:
