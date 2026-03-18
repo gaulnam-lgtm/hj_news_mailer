@@ -811,10 +811,26 @@ def to_html(all_articles):
   <!-- 인사말 -->
 <tr>
   <td style="padding:22px 32px 10px 32px;font-size:15px;line-height:22px;color:#1d497c;">
-    <b>안녕하세요.</b><br>
-    최근 일주일간 키워드별 주요 기사를 정리해 공유드립니다.
+    <b>안녕하세요.<br>
+    최근 일주일간 키워드별 주요 기사를 정리해 공유드립니다.</b>
   </td>
 </tr>
+
+  <!-- 주요 기사 헤더 -->
+  <tr>
+    <td style="padding:20px 32px 10px 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td style="font-size:18px;font-weight:800;color:#0f172a;white-space:nowrap;padding-right:12px;">
+            &#128240; 주요 기사
+          </td>
+          <td width="100%">
+            <div style="height:2px;background-color:#e0d9ff;border-radius:2px;"></div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
 
   <!-- 기사 카드 -->
   {cards_html if total_count > 0 else empty_html}
