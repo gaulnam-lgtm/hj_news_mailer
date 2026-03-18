@@ -13,9 +13,9 @@ from collections import defaultdict
 from xml.etree import ElementTree as ET
 
 # ── 설정 ────────────────────────────────────────────────────
-GMAIL_ID       = os.environ["GMAIL_ID"]
-GMAIL_PW       = os.environ["GMAIL_APP_PASSWORD"]
-MAIL_TO        = os.environ["MAIL_TO_PERSONAL"]
+GMAIL_ID            = os.environ["GMAIL_ID"]
+GMAIL_PW            = os.environ["GMAIL_APP_PASSWORD"]
+MAIL_TO             = os.environ["MAIL_TO_PERSONAL"]
 NAVER_CLIENT_ID     = os.environ["NAVER_CLIENT_ID"]
 NAVER_CLIENT_SECRET = os.environ["NAVER_CLIENT_SECRET"]
 MIN_ARTICLE_SCORE   = int(os.environ.get("MIN_ARTICLE_SCORE_PERSONAL", "5"))
@@ -30,12 +30,12 @@ with open(KEYWORDS_FILE, encoding="utf-8") as f:
     ]
 print(f"📋 키워드 {len(KEYWORDS)}개 로드: {KEYWORDS}")
 
-# ── 시간 설정 ────────────────────────────────────────────────
-KST        = timezone(timedelta(hours=9))
-today_dt   = datetime.now(KST)
-today      = today_dt.strftime("%Y년 %m월 %d일")
-since_dt   = today_dt - timedelta(days=1)   # 일간: 하루치
-since_str  = since_dt.strftime("%Y년 %m월 %d일")
+# ── 시간 설정 (발송일 기준 3일 전 ~ 오늘) ───────────────────
+KST       = timezone(timedelta(hours=9))
+today_dt  = datetime.now(KST)
+today     = today_dt.strftime("%Y년 %m월 %d일")
+since_dt  = today_dt - timedelta(days=3)
+since_str = since_dt.strftime("%Y년 %m월 %d일")
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 GOOGLEBOT_UA = (
@@ -43,30 +43,32 @@ GOOGLEBOT_UA = (
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 "
     "(compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
 )
-
 BOT_BLOCKED_DOMAINS = {"v.daum.net", "daum.net", "news.nate.com", "nate.com", "naver.com"}
 
-
+# ── 헤더/푸터 그라디언트 (따뜻한 3색 배색) ──────────────────
+WARM_GRADIENT = """
+    radial-gradient(ellipse at 15% 55%, rgba(255,100,80,0.60) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(255,210,80,0.50) 0%, transparent 48%),
+    radial-gradient(ellipse at 55% 95%, rgba(255,140,60,0.45) 0%, transparent 46%),
+    linear-gradient(135deg, #e8533a 0%, #f5891a 50%, #f5c842 100%)
+""".strip()
 
 # ── 핵심: 공백 무관 부분 일치 ────────────────────────────────
 def nospace(text: str) -> str:
-    """공백 전부 제거 + 소문자"""
     return re.sub(r"\s+", "", text or "").lower()
 
 def keyword_match(keyword: str, text: str) -> bool:
-    """
-    띄어쓰기 무관 부분 일치.
-    예) "방송미디어통신진흥원" → "한국방송미디어통신진흥원" 매칭
-        "앱 마켓" → "앱마켓" 매칭
-    """
     return nospace(keyword) in nospace(text)
 
-# ── 유틸 ──────────────────────────────────────────────────────
+# ── 유틸 ─────────────────────────────────────────────────────
 def strip_html(text):
     return re.sub(r"<[^>]+>", "", text or "").strip()
 
 def clean_spaces(text):
     return re.sub(r"\s+", " ", (text or "")).strip()
+
+def normalize_text(text):
+    return re.sub(r"\s+", "", strip_html(text or "")).lower()
 
 def get_domain(url):
     m = re.search(r"https?://(?:www\.)?([^/]+)", url or "")
@@ -77,10 +79,8 @@ def is_blocked_domain(url):
     return any(d == b or d.endswith("." + b) for b in BOT_BLOCKED_DOMAINS)
 
 def is_valid_snippet(text):
-    if not text or len(text) < 20:
-        return False
-    if "google news" in text.lower():
-        return False
+    if not text or len(text) < 20: return False
+    if "google news" in text.lower(): return False
     return True
 
 PRESS_MAP = {
@@ -105,8 +105,7 @@ def get_press_name(url, title=""):
             return name
     if " - " in title:
         maybe = title.rsplit(" - ", 1)[-1].strip()
-        if 1 < len(maybe) <= 30:
-            return maybe
+        if 1 < len(maybe) <= 30: return maybe
     return domain
 
 def make_absolute_url(base_url, img_url):
@@ -118,21 +117,16 @@ def make_absolute_url(base_url, img_url):
     base_path = parsed.path.rsplit("/",1)[0] + "/"
     return f"{parsed.scheme}://{parsed.netloc}{base_path}{img_url.lstrip('./')}"
 
-# ── 검색 쿼리 빌드 (띄어쓰기 양쪽 버전 OR) ──────────────────
+# ── 검색 쿼리 빌드 ───────────────────────────────────────────
 def build_search_query(keyword: str) -> str:
-    """
-    'ISMS-P' → 'ISMS-P'
-    '앱 마켓' → '앱 마켓 | 앱마켓'  (띄어쓰기 버전 + 붙인 버전)
-    """
     kw_nospace = re.sub(r"\s+", "", keyword)
     if kw_nospace != keyword:
         return f"{keyword} | {kw_nospace}"
     return keyword
 
-# ── 관련도 / 점수 ──────────────────────────────────────────────
+# ── 관련도 / 점수 ────────────────────────────────────────────
 def is_relevant_article(keyword, title, desc):
-    combined = f"{title} {desc}"
-    return keyword_match(keyword, combined)
+    return keyword_match(keyword, f"{title} {desc}")
 
 def score_article(keyword, title, desc):
     score = 0
@@ -140,10 +134,7 @@ def score_article(keyword, title, desc):
     if keyword_match(keyword, desc):  score += 3
     return score
 
-# ── 중복 제거 ──────────────────────────────────────────────────
-def normalize_text(text):
-    return re.sub(r"\s+", "", strip_html(text or "")).lower()
-
+# ── 중복 제거 ─────────────────────────────────────────────────
 def dedupe_articles(articles):
     seen, result = set(), []
     for a in articles:
@@ -153,7 +144,36 @@ def dedupe_articles(articles):
             result.append(a)
     return result
 
-# ── 기사 본문 정보 추출 ─────────────────────────────────────────
+def select_diverse_articles(articles, max_count=3):
+    """
+    키워드 내 기사 중복 방지 선택.
+    제목 유사도가 높으면 같은 사건 다른 보도로 판단하여 제외.
+    """
+    selected = []
+    for a in articles:
+        t_a = nospace(a.get("title", ""))
+        is_dup = False
+        for s in selected:
+            t_s = nospace(s.get("title", ""))
+            shorter = min(len(t_a), len(t_s))
+            if shorter == 0:
+                continue
+            # 한쪽 제목이 다른 쪽에 포함되면 중복
+            if t_a in t_s or t_s in t_a:
+                is_dup = True
+                break
+            # 공통 글자 비율이 70% 이상이면 중복
+            common = sum(1 for c in set(t_a) if c in t_s)
+            if common / shorter > 0.70:
+                is_dup = True
+                break
+        if not is_dup:
+            selected.append(a)
+        if len(selected) >= max_count:
+            break
+    return selected
+
+# ── 기사 본문 정보 추출 ──────────────────────────────────────
 def get_article_info(url, depth=0):
     if not url or not url.startswith("http") or depth > 3:
         return None, None
@@ -202,10 +222,10 @@ def get_article_info(url, depth=0):
     except:
         return None, None
 
-# ── 네이버 뉴스 ────────────────────────────────────────────────
+# ── 네이버 뉴스 ──────────────────────────────────────────────
 def fetch_naver_articles(keyword):
     query = build_search_query(keyword)
-    url = f"https://openapi.naver.com/v1/search/news.json?query={quote(query)}&display=10&sort=date"
+    url = f"https://openapi.naver.com/v1/search/news.json?query={quote(query)}&display=20&sort=date"
     req = Request(url)
     req.add_header("X-Naver-Client-Id", NAVER_CLIENT_ID)
     req.add_header("X-Naver-Client-Secret", NAVER_CLIENT_SECRET)
@@ -243,11 +263,12 @@ def fetch_naver_articles(keyword):
 
     articles.sort(key=lambda x: x["score"], reverse=True)
     articles = dedupe_articles(articles)
-    return [a for a in articles if a["score"] >= MIN_ARTICLE_SCORE][:3]
+    articles = [a for a in articles if a["score"] >= MIN_ARTICLE_SCORE]
+    return select_diverse_articles(articles, max_count=5)  # 넉넉히 수집 후 나중에 3개로
 
-# ── 구글 뉴스 RSS ──────────────────────────────────────────────
+# ── 구글 뉴스 RSS ─────────────────────────────────────────────
 def fetch_google_articles(keyword):
-    query = quote(build_search_query(keyword))
+    query   = quote(build_search_query(keyword))
     rss_url = f"https://news.google.com/rss/search?q={query}&hl=ko&gl=KR&ceid=KR:ko"
     req = Request(rss_url)
     req.add_header("User-Agent", USER_AGENT)
@@ -256,18 +277,18 @@ def fetch_google_articles(keyword):
             xml_data = resp.read().decode("utf-8", errors="ignore")
         root = ET.fromstring(xml_data)
         articles = []
-        for item in root.findall(".//item")[:10]:
-            t_el  = item.find("title")
-            l_el  = item.find("link")
-            d_el  = item.find("description")
-            p_el  = item.find("pubDate")
-            s_el  = item.find("source")
+        for item in root.findall(".//item")[:20]:
+            t_el = item.find("title")
+            l_el = item.find("link")
+            d_el = item.find("description")
+            p_el = item.find("pubDate")
+            s_el = item.find("source")
             if not (t_el is not None and l_el is not None and t_el.text): continue
 
             title_raw = clean_spaces(strip_html(t_el.text))
-            title = title_raw.rsplit(" - ",1)[0].strip() if " - " in title_raw else title_raw
-            press = get_press_name(l_el.text.strip(), title_raw)
-            link  = l_el.text.strip()
+            title     = title_raw.rsplit(" - ",1)[0].strip() if " - " in title_raw else title_raw
+            press     = get_press_name(l_el.text.strip(), title_raw)
+            link      = l_el.text.strip()
             real_link = s_el.get("url") if s_el is not None else None
             desc_raw  = clean_spaces(strip_html(d_el.text if d_el is not None else ""))
             pub_str   = p_el.text if p_el is not None else ""
@@ -292,18 +313,19 @@ def fetch_google_articles(keyword):
 
         articles.sort(key=lambda x: x["score"], reverse=True)
         articles = dedupe_articles(articles)
-        return [a for a in articles if a["score"] >= MIN_ARTICLE_SCORE][:3]
+        articles = [a for a in articles if a["score"] >= MIN_ARTICLE_SCORE]
+        return select_diverse_articles(articles, max_count=5)
     except Exception as e:
         print(f"  [ERROR] Google {keyword}: {e}")
         return []
 
-# ── HTML 생성 ──────────────────────────────────────────────────
+# ── HTML 생성 ─────────────────────────────────────────────────
 def to_html(all_articles):
     palette = ["#4f46e5","#db2777","#d97706","#059669","#2563eb","#dc2626","#7c3aed","#0891b2"]
-    kw_colors = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
+    kw_colors     = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
     article_count = sum(len(v) for v in all_articles.values())
 
-    cards_html = ""
+    cards_html  = ""
     total_count = 0
     for kw, articles in all_articles.items():
         color  = kw_colors[kw]
@@ -312,11 +334,11 @@ def to_html(all_articles):
             total_count += 1
             img_url = a.get("image") or ""
             if img_url:
-                safe_img = quote(img_url, safe=":/")
+                safe_img   = quote(img_url, safe=":/")
                 parsed_img = urlparse(img_url)
-                referer = quote(f"{parsed_img.scheme}://{parsed_img.netloc}/", safe="")
-                proxy = f"https://wsrv.nl/?url={safe_img}&w=240&h=180&fit=cover&referer={referer}&default=1"
-                image_td = f'''<td width="130" style="padding:11px 0 11px 12px;vertical-align:top;">
+                referer    = quote(f"{parsed_img.scheme}://{parsed_img.netloc}/", safe="")
+                proxy      = f"https://wsrv.nl/?url={safe_img}&w=240&h=180&fit=cover&referer={referer}&default=1"
+                image_td   = f'''<td width="130" style="padding:11px 0 11px 12px;vertical-align:top;">
                   <img src="{proxy}" width="120" height="90"
                        style="width:120px;height:90px;border-radius:10px;display:block;" alt="">
                 </td>'''
@@ -386,12 +408,7 @@ def to_html(all_articles):
 
   <!-- 헤더 -->
   <tr>
-    <td style="background:
-        radial-gradient(ellipse at 15% 60%, rgba(255,180,50,0.55) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 20%, rgba(255,100,80,0.40) 0%, transparent 48%),
-        radial-gradient(ellipse at 55% 95%, rgba(255,140,0,0.35) 0%, transparent 46%),
-        linear-gradient(135deg, #ff6b35 0%, #f7931e 45%, #ffb347 100%);
-        padding:22px 32px 18px;">
+    <td style="background:{WARM_GRADIENT};padding:22px 32px 18px;">
       <div style="font-size:13px;font-weight:800;letter-spacing:3px;
                   color:rgba(255,255,255,0.90);margin-bottom:10px;font-family:Arial,sans-serif;">
         &#128203;&nbsp;&nbsp;DAILY PERSONAL NEWS
@@ -410,7 +427,7 @@ def to_html(all_articles):
   <!-- 인사말 -->
   <tr>
     <td style="padding:22px 32px 10px;font-size:14px;line-height:22px;color:#475569;">
-      오늘의 키워드별 주요 기사를 정리했습니다.
+      최근 3일간 키워드별 주요 기사를 정리했습니다.
     </td>
   </tr>
 
@@ -419,7 +436,7 @@ def to_html(all_articles):
 
   <!-- 푸터 -->
   <tr>
-    <td style="background:linear-gradient(135deg,#ff6b35 0%,#f7931e 50%,#ffb347 100%);
+    <td style="background:{WARM_GRADIENT};
                padding:18px 32px;text-align:center;border-radius:0 0 20px 20px;">
       <div style="font-size:11px;color:rgba(255,255,255,0.85);font-family:Arial,sans-serif;">
         개인 뉴스레터 &middot; 자동 발송 &middot; {today}
@@ -432,7 +449,7 @@ def to_html(all_articles):
 </table>
 </body></html>"""
 
-# ── 메일 발송 ──────────────────────────────────────────────────
+# ── 메일 발송 ─────────────────────────────────────────────────
 def send_mail(html):
     recipients = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
@@ -447,34 +464,33 @@ def send_mail(html):
             print(f"  → {r} 발송 완료")
     print(f"✅ 발송 완료 ({len(recipients)}명)")
 
-# ── 실행 ───────────────────────────────────────────────────────
+# ── 실행 ─────────────────────────────────────────────────────
 if __name__ == "__main__":
-    print("🔍 뉴스 탐색 중...")
+    print("🔍 뉴스 탐색 중 (최근 3일)...")
     all_articles = {}
     for kw in KEYWORDS:
         print(f"  - [{kw}] 검색 중...")
         naver  = fetch_naver_articles(kw)
         google = fetch_google_articles(kw)
+
+        # 네이버 + 구글 합산 후 다시 다양성 선별
         combined = naver + google
         combined.sort(key=lambda x: x.get("score",0), reverse=True)
         combined = dedupe_articles(combined)
         combined = [a for a in combined if a.get("score",0) >= MIN_ARTICLE_SCORE]
-        if combined:
-            all_articles[kw] = combined[:3]
-            print(f"    → {len(all_articles[kw])}건")
+        combined = select_diverse_articles(combined, max_count=3)  # 최종 3개 다양성 선별
 
-    # 전역 중복 제거
+        if combined:
+            all_articles[kw] = combined
+            print(f"    → {len(combined)}건")
+
+    # 전역 링크 중복 제거
     link_seen = set()
     for kw in list(all_articles.keys()):
-        deduped = []
-        for a in all_articles[kw]:
-            if a["link"] not in link_seen:
-                link_seen.add(a["link"])
-                deduped.append(a)
-        if deduped:
-            all_articles[kw] = deduped
-        else:
-            del all_articles[kw]
+        deduped = [a for a in all_articles[kw] if a["link"] not in link_seen]
+        for a in deduped: link_seen.add(a["link"])
+        if deduped: all_articles[kw] = deduped
+        else: del all_articles[kw]
 
     total = sum(len(v) for v in all_articles.values())
     print(f"✅ 최종 {total}건 수집")
