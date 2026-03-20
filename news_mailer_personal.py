@@ -131,7 +131,7 @@ def is_relevant_article(keyword, title, desc):
 def score_article(keyword, title, desc):
     score = 0
     if keyword_match(keyword, title): score += 6
-    if keyword_match(keyword, desc):  score += 3
+    if keyword_match(keyword, desc):  score += 5
     return score
 
 # ── 중복 제거 ─────────────────────────────────────────────────
