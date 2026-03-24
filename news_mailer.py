@@ -926,10 +926,9 @@ if __name__ == "__main__":
             removed_count += removed
 
     all_articles = {k: v for k, v in all_articles.items() if v}
-        # 전역 중복 제거로 기사가 빠진 경우 날짜 순서가 흐트러질 수 있어 재정렬
-for v in all_articles.values():
-    v.sort(key=lambda x: x.get("date", ""), reverse=True)
-total_found = sum(len(v) for v in all_articles.values())
+    for v in all_articles.values():
+        v.sort(key=lambda x: x.get("date", ""), reverse=True)
+    total_found = sum(len(v) for v in all_articles.values())
     print(f"✅ 중복 제거 완료 (제거: {removed_count}건, 최종: {total_found}건)")
 
     html = to_html(all_articles)
