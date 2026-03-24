@@ -7,10 +7,13 @@ import base64
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 from email.utils import parsedate_to_datetime, formataddr
 from email.header import Header
 from urllib.request import Request, urlopen
 from urllib.parse import quote, urlparse
+import mimetypes
+import hashlib
 from collections import defaultdict
 from xml.etree import ElementTree as ET
 
@@ -281,7 +284,6 @@ def extract_candidate_snippets_from_html(html: str) -> list:
 
 # ── 기사 정보 추출 (기존 그대로) ─────────────────────────────
 def get_article_info(url: str, depth=0) -> tuple:
-    # ... (원본과 동일 - 생략 없이 그대로 사용하세요)
     if not url or not url.startswith("http") or depth > 3:
         return None, None
     try:
@@ -294,40 +296,86 @@ def get_article_info(url: str, depth=0) -> tuple:
             html = resp.read().decode("utf-8", errors="ignore")
 
         if "news.google.com" in current_url or "news.url.google.com" in current_url:
-            m = re.search(r'data-n-au=["\'](http[^"\']+)["\']', html, re.IGNORECASE)
+            m = re.search(r"data-n-au=[\"'](http[^\"']+)[\"']", html, re.IGNORECASE)
             if not m:
-                m = re.search(r'<meta\s+http-equiv=["\']refresh["\']\s+content=["\'][^;]+;\s*url=([^"\']+)["\']', html, re.IGNORECASE)
+                m = re.search(r"<meta\s+http-equiv=[\"']refresh[\"']\s+content=[\"'][^;]+;\s*url=([^\"']+)[\"']", html, re.IGNORECASE)
             if not m:
-                m = re.search(r'<a\s+[^>]*href=["\'](http[^"\']+)["\'][^>]*>', html, re.IGNORECASE)
+                m = re.search(r"<a\s+[^>]*href=[\"'](http[^\"']+)[\"'][^>]*>", html, re.IGNORECASE)
             if m:
                 real_url = m.group(1).replace("&amp;", "&")
                 if real_url and real_url != url:
-                    return get_article_info(real_url, depth=depth+1)
+                    return get_article_info(real_url, depth=depth + 1)
             return None, None
 
         def extract_meta(html_text, meta_name):
-            pat1 = rf'<meta\s+[^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\'][^>]*?content\s*=\s*["\']([^"\']+)["\']'
+            pat1 = rf"<meta\s+[^>]*?(?:property|name)\s*=\s*[\"']{meta_name}[\"'][^>]*?content\s*=\s*[\"']([^\"']+)[\"']"
             m = re.search(pat1, html_text, re.IGNORECASE)
-            if m: return m.group(1).strip()
-            pat2 = rf'<meta\s+[^>]*?content\s*=\s*["\']([^"\']+)["\'][^>]*?(?:property|name)\s*=\s*["\']{meta_name}["\']'
+            if m:
+                return m.group(1).strip()
+            pat2 = rf"<meta\s+[^>]*?content\s*=\s*[\"']([^\"']+)[\"'][^>]*?(?:property|name)\s*=\s*[\"']{meta_name}[\"']"
             m = re.search(pat2, html_text, re.IGNORECASE)
-            if m: return m.group(1).strip()
+            if m:
+                return m.group(1).strip()
             return None
 
-        img_raw = extract_meta(html, "og:image") or extract_meta(html, "twitter:image")
+        def looks_like_image_url(candidate: str) -> bool:
+            if not candidate:
+                return False
+            low = candidate.lower()
+            if low.startswith("data:image/"):
+                return True
+            if any(tok in low for tok in ["sprite", "icon", "logo", "favicon", "blank.", "placeholder"]):
+                return False
+            return any(x in low for x in [".jpg", ".jpeg", ".png", ".webp", ".gif", "image", "thumb", "photo", "upload", "cdn", "media"])
+
         image = None
-        if img_raw:
-            final_img = make_absolute_url(current_url, img_raw)
-            if "lh3.googleusercontent.com" not in final_img and "news.google.com" not in final_img:
-                try:
-                    img_req = Request(final_img, method="HEAD")
-                    img_req.add_header("User-Agent", USER_AGENT)
-                    img_req.add_header("Referer", f"{urlparse(final_img).scheme}://{urlparse(final_img).netloc}/")
-                    with urlopen(img_req, timeout=5) as img_resp:
-                        if "image" in img_resp.headers.get("Content-Type", ""):
-                            image = final_img
-                except Exception:
-                    pass
+        image_candidates = []
+        for raw in [
+            extract_meta(html, "og:image"),
+            extract_meta(html, "og:image:url"),
+            extract_meta(html, "twitter:image"),
+            extract_meta(html, "twitter:image:src"),
+        ]:
+            if raw:
+                image_candidates.append(raw)
+
+        for m in re.finditer(r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>", html, re.IGNORECASE | re.DOTALL):
+            block = m.group(1)
+            for pat in [r'"image"\s*:\s*"([^"]+)"', r'"thumbnailUrl"\s*:\s*"([^"]+)"']:
+                mm = re.search(pat, block, re.IGNORECASE | re.DOTALL)
+                if mm:
+                    image_candidates.append(mm.group(1))
+            for arr in re.finditer(r'"image"\s*:\s*\[(.*?)\]', block, re.IGNORECASE | re.DOTALL):
+                for u in re.findall(r'"(https?:\\/\\/[^"\\]+|\\/[^"\\]+)"', arr.group(1)):
+                    image_candidates.append(u)
+
+        img_patterns = [
+            r'<img[^>]+(?:data-src|data-original|data-lazy-src|data-srcset|srcset|src)=["\']([^"\']+)["\'][^>]*(?:class|id|itemprop)=["\'][^"\']*(?:thumb|thumbnail|image|photo|figure|article|news|hero|lead|main)[^"\']*["\']',
+            r'<img[^>]*(?:class|id|itemprop)=["\'][^"\']*(?:thumb|thumbnail|image|photo|figure|article|news|hero|lead|main)[^"\']*["\'][^>]+(?:data-src|data-original|data-lazy-src|data-srcset|srcset|src)=["\']([^"\']+)["\']',
+            r'<img[^>]+(?:data-src|data-original|data-lazy-src|data-srcset|srcset|src)=["\']([^"\']+)["\']',
+        ]
+        for pat in img_patterns:
+            for mm in re.finditer(pat, html, re.IGNORECASE | re.DOTALL):
+                cand = mm.group(1)
+                if looks_like_image_url(cand):
+                    image_candidates.append(cand)
+
+        seen = set()
+        for raw in image_candidates:
+            raw = (raw or '').replace('/', '/').strip()
+            if ',' in raw and ' ' in raw:
+                raw = raw.split(',')[0].strip().split()[0]
+            final_img = make_absolute_url(current_url, raw)
+            if not final_img or final_img in seen:
+                continue
+            seen.add(final_img)
+            low = final_img.lower()
+            if "lh3.googleusercontent.com" in low or "news.google.com" in low:
+                continue
+            if any(tok in low for tok in ["sprite", "icon", "logo", "favicon", "/ads/"]):
+                continue
+            image = final_img
+            break
 
         snippet = None
         meta_candidates = [
@@ -350,6 +398,74 @@ def get_article_info(url: str, depth=0) -> tuple:
 
     except Exception:
         return None, None
+
+def download_image_bytes(url: str, referer_url: str = "", timeout: int = 10):
+    if not url or not url.startswith("http"):
+        return None, None
+
+    parsed = urlparse(url)
+    referer_candidates = []
+    if referer_url:
+        referer_candidates.append(referer_url)
+        try:
+            rp = urlparse(referer_url)
+            referer_candidates.append(f"{rp.scheme}://{rp.netloc}/")
+        except Exception:
+            pass
+    referer_candidates.append(f"{parsed.scheme}://{parsed.netloc}/")
+
+    user_agents = [USER_AGENT, GOOGLEBOT_UA]
+    accepts = [
+        "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        "image/webp,image/apng,image/*,*/*;q=0.8",
+        "*/*",
+    ]
+
+    for ua in user_agents:
+        for referer in referer_candidates:
+            for accept in accepts:
+                try:
+                    req = Request(url)
+                    req.add_header("User-Agent", ua)
+                    req.add_header("Accept", accept)
+                    req.add_header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
+                    req.add_header("Referer", referer)
+                    with urlopen(req, timeout=timeout) as resp:
+                        raw_type = (resp.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+                        data = resp.read(2_000_000)
+                    if not data:
+                        continue
+                    if not raw_type.startswith("image/"):
+                        guessed, _ = mimetypes.guess_type(url)
+                        raw_type = (guessed or "").lower()
+                    if not raw_type.startswith("image/"):
+                        continue
+                    subtype = raw_type.split("/", 1)[1]
+                    if subtype == "jpg":
+                        subtype = "jpeg"
+                    if subtype in {"svg+xml", "svg", "bmp", "tiff", "x-icon", "vnd.microsoft.icon"}:
+                        continue
+                    return data, subtype
+                except Exception:
+                    continue
+    return None, None
+
+
+def prepare_inline_images(all_articles):
+    inline_images = {}
+
+    for kw, articles in all_articles.items():
+        for idx, article in enumerate(articles, start=1):
+            cid = f"thumb-{hashlib.md5((article.get('link', '') + str(idx)).encode('utf-8')).hexdigest()[:16]}"
+            img_url = article.get("image") or ""
+            data, subtype = download_image_bytes(img_url, article.get("link", "")) if img_url else (None, None)
+            if not data or not subtype:
+                article["inline_cid"] = ""
+                continue
+            inline_images[cid] = {"data": data, "subtype": subtype, "filename": f"{cid}.{subtype}"}
+            article["inline_cid"] = cid
+
+    return inline_images
 
 # ── 중복 제거, 검색 쿼리, 관련도, 점수, 네이버/구글 검색 함수 (원본 그대로) ─────
 def dedupe_articles(articles):
@@ -663,28 +779,17 @@ def to_html(all_articles):
         tag_bg = color + "18"
         for a in articles:
             total_count += 1
-            img_url = a.get("image") or ""
-
-            if img_url:
-                safe_img_url = quote(img_url, safe=":/")
-                parsed_img = urlparse(img_url)
-                img_referer = quote(f"{parsed_img.scheme}://{parsed_img.netloc}/", safe="")
-                proxy_url = (
-                    f"https://wsrv.nl/?url={safe_img_url}"
-                    f"&w=240&h=180&fit=cover"
-                    f"&referer={img_referer}"
-                    f"&default=1"
-                )
+            cid = a.get("inline_cid", "")
+            image_td = ""
+            text_pl = "18px"
+            if cid:
                 image_td = f'''
-                  <td width="130" style="padding:11px 0 11px 12px;vertical-align:top;">
-                    <img src="{proxy_url}" width="120" height="90"
-                         style="width:120px;height:90px;border-radius:10px;display:block;background-color:#f8fafc;" alt="">
-                  </td>
-                '''
+              <td width="130" style="padding:11px 0 11px 12px;vertical-align:top;">
+                <img src="cid:{cid}" width="120" height="90"
+                     style="width:120px;height:90px;border-radius:10px;display:block;background-color:#f8fafc;object-fit:cover;" alt="">
+              </td>
+            '''
                 text_pl = "8px"
-            else:
-                image_td = ""
-                text_pl  = "16px"
 
             summary_text = clean_spaces(a.get("summary", ""))
             if summary_text:
@@ -862,18 +967,27 @@ def to_html(all_articles):
 </body></html>"""
 
 # ── 메일 발송 ───────────────────────────────────────────────
-def send_mail(html):
+def send_mail(html, inline_images):
     recipients = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
         smtp.login(GMAIL_ID, GMAIL_PW)
         for recipient in recipients:
-            # 수신자마다 새 msg 객체 생성
-            msg = MIMEMultipart("alternative")
+            msg = MIMEMultipart("related")
             msg["Subject"] = f"[앱 마켓 뉴스 레터] {today}"
             msg["From"] = formataddr((str(Header("KISA(김형진)", "utf-8")), f"{GMAIL_ID}@gmail.com"))
             msg["To"] = recipient
-            msg.attach(MIMEText(html, "html", "utf-8"))
+
+            alt = MIMEMultipart("alternative")
+            alt.attach(MIMEText(html, "html", "utf-8"))
+            msg.attach(alt)
+
+            for cid, payload in inline_images.items():
+                img_part = MIMEImage(payload["data"], _subtype=payload["subtype"])
+                img_part.add_header("Content-ID", f"<{cid}>")
+                img_part.add_header("Content-Disposition", "inline", filename=payload["filename"])
+                msg.attach(img_part)
+
             smtp.sendmail(msg["From"], [recipient], msg.as_string())
             print(f"  → {recipient} 발송 완료")
 
@@ -931,6 +1045,7 @@ if __name__ == "__main__":
     total_found = sum(len(v) for v in all_articles.values())
     print(f"✅ 중복 제거 완료 (제거: {removed_count}건, 최종: {total_found}건)")
 
+    inline_images = prepare_inline_images(all_articles)
     html = to_html(all_articles)
-    send_mail(html)
+    send_mail(html, inline_images)
     print(f"✅ 전체 완료 (발송 기사: {total_found}건)")
