@@ -893,7 +893,9 @@ if __name__ == "__main__":
         combined = dedupe_articles(combined)
         combined = [a for a in combined if a.get("score", 0) >= MIN_ARTICLE_SCORE]
         if combined:
-            all_articles[kw] = combined[:3]
+            top3 = combined[:3]                                      # score 기준 상위 3개 선발
+            top3.sort(key=lambda x: x.get("date", ""), reverse=True)  # 그 안에서 날짜 내림차순
+            all_articles[kw] = top3
             print(f"    → {len(all_articles[kw])}건 수집")
 
     print("🔄 전역 중복 제거 중...")
@@ -924,7 +926,10 @@ if __name__ == "__main__":
             removed_count += removed
 
     all_articles = {k: v for k, v in all_articles.items() if v}
-    total_found = sum(len(v) for v in all_articles.values())
+        # 전역 중복 제거로 기사가 빠진 경우 날짜 순서가 흐트러질 수 있어 재정렬
+        for v in all_articles.values():
+            v.sort(key=lambda x: x.get("date", ""), reverse=True)
+        total_found = sum(len(v) for v in all_articles.values())
     print(f"✅ 중복 제거 완료 (제거: {removed_count}건, 최종: {total_found}건)")
 
     html = to_html(all_articles)
