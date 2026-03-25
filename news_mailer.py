@@ -14,8 +14,10 @@ from urllib.request import Request, urlopen
 from urllib.parse import quote, urlparse
 import mimetypes
 import hashlib
+import io
 from collections import defaultdict
 from xml.etree import ElementTree as ET
+from PIL import Image, ImageOps, ImageFile
 
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
@@ -70,6 +72,19 @@ USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 GOOGLEBOT_UA = ("Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 "
                 "(compatible; Googlebot/2.1; +http://www.google.com/bot.html)")
+
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+# ── 썸네일 최적화 설정 ───────────────────────────────────────
+THUMB_DISPLAY_W = int(os.environ.get("THUMB_DISPLAY_W", "120"))
+THUMB_DISPLAY_H = int(os.environ.get("THUMB_DISPLAY_H", "90"))
+THUMB_MAX_W = int(os.environ.get("THUMB_MAX_W", "160"))
+THUMB_MAX_H = int(os.environ.get("THUMB_MAX_H", "120"))
+THUMB_TARGET_BYTES = int(os.environ.get("THUMB_TARGET_BYTES", "35000"))
+THUMB_MIN_QUALITY = int(os.environ.get("THUMB_MIN_QUALITY", "38"))
+THUMB_MAX_QUALITY = int(os.environ.get("THUMB_MAX_QUALITY", "60"))
+
 
 # ── 이미지 Base64 (GitHub 업로드용) ─────────────────────────
 IMAGE1_PATH = "image1.png"
@@ -399,6 +414,66 @@ def get_article_info(url: str, depth=0) -> tuple:
     except Exception:
         return None, None
 
+def optimize_thumbnail_bytes(data: bytes, subtype: str, display_w: int = THUMB_DISPLAY_W, display_h: int = THUMB_DISPLAY_H,
+                             max_w: int = THUMB_MAX_W, max_h: int = THUMB_MAX_H, target_bytes: int = THUMB_TARGET_BYTES):
+    """이메일 첨부용 썸네일을 작게 리사이즈/압축.
+    - 노출 크기(120x90)에 맞춰 충분한 해상도만 유지
+    - 사진류는 JPEG로 재인코딩하여 용량 절감
+    - 목표 용량을 넘으면 품질/해상도를 추가로 낮춤
+    """
+    if not data:
+        return data, subtype
+
+    try:
+        with Image.open(io.BytesIO(data)) as im:
+            im = ImageOps.exif_transpose(im)
+            frame = getattr(im, "n_frames", 1)
+            if frame > 1:
+                try:
+                    im.seek(0)
+                except Exception:
+                    pass
+
+            if im.mode not in ("RGB", "RGBA", "L", "LA", "P"):
+                im = im.convert("RGB")
+
+            # 실제 표시보다 약간만 큰 크기로 제한
+            thumb = im.copy()
+            thumb.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
+
+            # 너무 작은 이미지는 확대하지 않음
+            has_alpha = thumb.mode in ("RGBA", "LA") or (thumb.mode == "P" and 'transparency' in thumb.info)
+            if has_alpha:
+                bg = Image.new("RGB", thumb.size, (255, 255, 255))
+                alpha = thumb.convert("RGBA")
+                bg.paste(alpha, mask=alpha.getchannel("A"))
+                thumb = bg
+            elif thumb.mode != "RGB":
+                thumb = thumb.convert("RGB")
+
+            best = None
+            current = thumb
+            for size_step in range(4):
+                for quality in (THUMB_MAX_QUALITY, 54, 48, 44, THUMB_MIN_QUALITY):
+                    buf = io.BytesIO()
+                    current.save(buf, format="JPEG", quality=quality, optimize=True, progressive=True, subsampling="4:2:0")
+                    payload = buf.getvalue()
+                    best = payload if best is None or len(payload) < len(best) else best
+                    if len(payload) <= target_bytes:
+                        return payload, "jpeg"
+
+                if size_step < 3:
+                    next_w = max(display_w, int(current.width * 0.88))
+                    next_h = max(display_h, int(current.height * 0.88))
+                    if (next_w, next_h) == current.size:
+                        break
+                    current = current.resize((next_w, next_h), Image.Resampling.LANCZOS)
+
+            return best, "jpeg"
+    except Exception:
+        return data, subtype
+
+
 def download_image_bytes(url: str, referer_url: str = "", timeout: int = 10):
     if not url or not url.startswith("http"):
         return None, None
@@ -462,6 +537,12 @@ def prepare_inline_images(all_articles):
             if not data or not subtype:
                 article["inline_cid"] = ""
                 continue
+
+            data, subtype = optimize_thumbnail_bytes(data, subtype)
+            if not data or not subtype:
+                article["inline_cid"] = ""
+                continue
+
             inline_images[cid] = {"data": data, "subtype": subtype, "filename": f"{cid}.{subtype}"}
             article["inline_cid"] = cid
 
@@ -785,8 +866,8 @@ def to_html(all_articles):
             if cid:
                 image_td = f'''
               <td width="130" style="padding:11px 0 11px 12px;vertical-align:top;">
-                <img src="cid:{cid}" width="120" height="90"
-                     style="width:120px;height:90px;border-radius:10px;display:block;background-color:#f8fafc;object-fit:cover;" alt="">
+                <img src="cid:{cid}" width="{THUMB_DISPLAY_W}" height="{THUMB_DISPLAY_H}"
+                     style="width:{THUMB_DISPLAY_W}px;height:{THUMB_DISPLAY_H}px;border-radius:10px;display:block;background-color:#f8fafc;object-fit:cover;" alt="">
               </td>
             '''
                 text_pl = "8px"
