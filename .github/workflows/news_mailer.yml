@@ -8,10 +8,10 @@ on:
       mode:
         description: '발송 모드'
         required: true
-        default: 'daily'               # ← default를 daily로 변경
+        default: 'daily'
         type: choice
         options:
-          - daily                        # ← daily를 위로 올림
+          - daily
           - weekly
 
 env:
@@ -29,13 +29,18 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: 의존성 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install Pillow requests beautifulsoup4 lxml
+
       - name: 뉴스 서치 및 메일 발송
         env:
-          GMAIL_ID:             ${{ secrets.GMAIL_ID }}
-          GMAIL_APP_PASSWORD:   ${{ secrets.GMAIL_APP_PASSWORD }}
-          MAIL_TO:              ${{ secrets.MAIL_TO }}
-          MAIL_TO_DAILY:        ${{ secrets.MAIL_TO_DAILY }}
-          KEYWORDS:             ${{ secrets.KEYWORDS }}
-          NAVER_CLIENT_ID:      ${{ secrets.NAVER_CLIENT_ID }}
-          NAVER_CLIENT_SECRET:  ${{ secrets.NAVER_CLIENT_SECRET }}
-        run: python news_mailer.py --mode ${{ github.event.client_payload.mode || github.event.inputs.mode || 'weekly' }}
+          GMAIL_ID: ${{ secrets.GMAIL_ID }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          MAIL_TO_DAILY: ${{ secrets.MAIL_TO_DAILY }}
+          KEYWORDS: ${{ secrets.KEYWORDS }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+        run: python news_mailer.py --mode ${{ github.event.client_payload.mode || github.event.inputs.mode || 'daily' }}
