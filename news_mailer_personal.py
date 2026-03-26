@@ -592,9 +592,7 @@ def to_html(all_articles):
   <!-- 헤더 -->
   <tr>
     <td style="background:
-        radial-gradient(ellipse at 18% 55%,rgba(99,102,241,0.55) 0%,transparent 52%),
-        radial-gradient(ellipse at 82% 18%,rgba(0,212,255,0.28) 0%,transparent 46%),
-        linear-gradient(135deg,#0f0c29 0%,#302b63 55%,#1a1a4e 100%);
+        linear-gradient(135deg,rgb(26,50,99) 0%,rgb(84,119,146) 33%,rgb(239,210,176) 66%,rgb(255,197,112) 100%);
         padding:22px 32px 18px;">
       <div style="font-size:13px;font-weight:800;letter-spacing:3px;
                   color:rgba(147,197,253,0.85);margin-bottom:10px;font-family:Arial,sans-serif;">
@@ -613,7 +611,7 @@ def to_html(all_articles):
   <!-- 인사말 -->
   <tr>
     <td style="padding:22px 32px 10px;font-size:14px;line-height:22px;color:#475569;">
-      오늘의 키워드별 주요 기사를 정리했습니다.
+      최근 3일간 키워드별 주요 기사를 정리했습니다.
     </td>
   </tr>
 
@@ -622,7 +620,7 @@ def to_html(all_articles):
 
   <!-- 푸터 -->
   <tr>
-    <td style="background:linear-gradient(135deg,#0f0c29 0%,#302b63 55%,#1a1a4e 100%);
+    <td style="background:linear-gradient(135deg,rgb(26,50,99) 0%,rgb(84,119,146) 33%,rgb(239,210,176) 66%,rgb(255,197,112) 100%);
                padding:18px 32px;text-align:center;border-radius:0 0 20px 20px;">
       <div style="font-size:11px;color:rgba(186,230,253,0.75);font-family:Arial,sans-serif;">
         개인 뉴스레터 &middot; 자동 발송 &middot; {today}
