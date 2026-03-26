@@ -592,17 +592,15 @@ def to_html(all_articles):
   <!-- 헤더 -->
   <tr>
     <td style="background:
-        radial-gradient(ellipse at 18% 55%,rgba(99,102,241,0.55) 0%,transparent 52%),
-        radial-gradient(ellipse at 82% 18%,rgba(0,212,255,0.28) 0%,transparent 46%),
-        linear-gradient(135deg,#0f0c29 0%,#302b63 55%,#1a1a4e 100%);
+        linear-gradient(135deg,rgb(26,50,99) 0%,rgb(84,119,146) 33%,rgb(239,210,176) 66%,rgb(255,197,112) 100%);
         padding:22px 32px 18px;">
       <div style="font-size:13px;font-weight:800;letter-spacing:3px;
                   color:rgba(147,197,253,0.85);margin-bottom:10px;font-family:Arial,sans-serif;">
         &#128203;&nbsp;&nbsp;DAILY PERSONAL NEWS
       </div>
-      <div style="margin-bottom:10px;">
-        <img src="{IMAGE1_BASE64}" height="56"
-             style="height:56px;width:auto;display:block;" alt="개인 뉴스레터">
+      <div style="font-size:28px;font-weight:900;color:#ffffff;margin-bottom:10px;
+                  font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
+        일간 개인 뉴스레터
       </div>
       <div style="font-size:13px;color:rgba(180,215,255,0.75);font-family:Arial,sans-serif;">
         &#9679; {since_str} ~ {today} &nbsp;·&nbsp; 기사 {article_count}건 &nbsp;·&nbsp; 키워드 {len(all_articles)}개
