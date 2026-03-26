@@ -1,25 +1,22 @@
 name: 개인 뉴스레터 발송
-
 on:
   repository_dispatch:
-    types: [personal-daily-trigger]   # 앱마켓(cron-trigger)과 구분
+    types: [personal-daily-trigger]
   workflow_dispatch:
-
 env:
   TZ: Asia/Seoul
-
 jobs:
   send-personal-news:
     runs-on: ubuntu-latest
     steps:
       - name: 저장소 체크아웃
-        uses: actions/checkout@v6          # v4 → v6 변경
-
+        uses: actions/checkout@v6
       - name: Python 설치
-        uses: actions/setup-python@v6      # v5 → v6 변경
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-
+      - name: 패키지 설치
+        run: pip install Pillow
       - name: 개인 뉴스레터 발송
         env:
           GMAIL_ID:             ${{ secrets.GMAIL_ID }}
