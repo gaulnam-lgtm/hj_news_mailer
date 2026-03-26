@@ -22,37 +22,31 @@ from PIL import Image, ImageOps, ImageFile
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
 GMAIL_PW = os.environ["GMAIL_APP_PASSWORD"]
-
 mode = "weekly"
 if "--mode" in sys.argv:
     mode = sys.argv[sys.argv.index("--mode") + 1]
-
 if mode == "daily":
     MAIL_TO = os.environ["MAIL_TO_DAILY"]
 else:
     MAIL_TO = os.environ["MAIL_TO"]
-
-KEYWORDS = json.loads(os.environ["KEYWORDS"])
 NAVER_CLIENT_ID = os.environ["NAVER_CLIENT_ID"]
 NAVER_CLIENT_SECRET = os.environ["NAVER_CLIENT_SECRET"]
-
 MIN_ARTICLE_SCORE = int(os.environ.get("MIN_ARTICLE_SCORE", "7"))
 
-KEYWORDS_PLATFORM = json.loads(
-    os.environ.get("KEYWORDS_PLATFORM", json.dumps([
-        "애플", "앱스토어", "구글", "플레이스토어", "앱 마켓",
-        "원스토어", "갤럭시스토어", "인앱결제", "외부결제",
-        "제3자결제", "수수료", "정책", "규제", "심사", "결제"
-    ], ensure_ascii=False))
-)
+# ── 키워드 파일 로드 ─────────────────────────────────────────
+def _load_keywords(filepath: str) -> list:
+    with open(filepath, encoding="utf-8") as f:
+        return [
+            line.strip()
+            for line in f
+            if line.strip() and not line.strip().startswith("#")
+        ]
 
-KEYWORDS_EXCLUDE = json.loads(
-    os.environ.get("KEYWORDS_EXCLUDE", json.dumps([
-        "홈페이지", "웹사이트", "블로그", "SEO", "마케팅",
-        "외부링크", "백링크", "트래픽", "도메인",
-        "검색엔진최적화", "페이지뷰", "유입", "홍보"
-    ], ensure_ascii=False))
-)
+KEYWORDS          = _load_keywords("keywords.txt")
+KEYWORDS_PLATFORM = _load_keywords("keywords_platform.txt")
+KEYWORDS_EXCLUDE  = _load_keywords("keywords_exclude.txt")
+print(f"📋 메인 키워드 {len(KEYWORDS)}개: {KEYWORDS}")
+print(f"📋 플랫폼 키워드 {len(KEYWORDS_PLATFORM)}개 / 제외 키워드 {len(KEYWORDS_EXCLUDE)}개 로드")
 
 KST = timezone(timedelta(hours=9))
 today_dt = datetime.now(KST)
