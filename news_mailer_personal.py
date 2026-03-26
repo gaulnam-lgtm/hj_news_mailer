@@ -592,7 +592,9 @@ def to_html(all_articles):
   <!-- 헤더 -->
   <tr>
     <td style="background:
-        linear-gradient(135deg,rgb(26,50,99) 0%,rgb(84,119,146) 33%,rgb(239,210,176) 66%,rgb(255,197,112) 100%);
+        radial-gradient(ellipse at 18% 55%,rgba(99,102,241,0.55) 0%,transparent 52%),
+        radial-gradient(ellipse at 82% 18%,rgba(0,212,255,0.28) 0%,transparent 46%),
+        linear-gradient(135deg,#0f0c29 0%,#302b63 55%,#1a1a4e 100%);
         padding:22px 32px 18px;">
       <div style="font-size:13px;font-weight:800;letter-spacing:3px;
                   color:rgba(147,197,253,0.85);margin-bottom:10px;font-family:Arial,sans-serif;">
