@@ -22,9 +22,11 @@ from PIL import Image, ImageOps, ImageFile
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
 GMAIL_PW = os.environ["GMAIL_APP_PASSWORD"]
-mode = "weekly"
+mode = "auto"
 if "--mode" in sys.argv:
     mode = sys.argv[sys.argv.index("--mode") + 1]
+if mode == "auto":
+    mode = "weekly" if today_dt.weekday() == 0 else "daily"
 if mode == "daily":
     MAIL_TO = os.environ["MAIL_TO_DAILY"]
 else:
