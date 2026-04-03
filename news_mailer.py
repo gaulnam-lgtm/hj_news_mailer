@@ -740,6 +740,143 @@ def fetch_google_articles(keyword):
         print(f"  [ERROR] Google {keyword} 실패: {e}")
         return []
 
+# ── 해외 규제기관 공식 RSS 수집 ──────────────────────────────
+# 구글 뉴스(2차 보도) 대신 규제기관 1차 발표문을 직접 수집
+REGULATORY_SOURCES = [
+    {
+        "label": "FTC",
+        "url": "https://www.ftc.gov/feeds/press-release.xml",
+        "lang": "en",
+    },
+    {
+        "label": "CMA",
+        "url": "https://www.gov.uk/government/organisations/competition-and-markets-authority.atom",
+        "lang": "en",
+    },
+    {
+        "label": "EU Commission",
+        "url": "https://ec.europa.eu/commission/presscorner/api/rss",
+        "lang": "en",
+    },
+    {
+        "label": "Google Play Blog",
+        "url": "https://blog.google/products/google-play/rss/",
+        "lang": "en",
+    },
+    {
+        "label": "Apple Newsroom",
+        "url": "https://www.apple.com/newsroom/rss-feed.rss",
+        "lang": "en",
+    },
+]
+
+# 규제기관 기사 관련성 판단용 키워드
+REGULATORY_FILTER_KEYWORDS = [
+    "app store", "app market", "google play", "apple", "in-app purchase",
+    "in-app payment", "digital markets act", "dma", "sideloading",
+    "anti-steering", "commission", "antitrust", "app developer",
+    "앱스토어", "앱마켓", "인앱결제", "디지털시장법", "수수료", "규제",
+]
+
+def fetch_regulatory_articles():
+    """해외 규제기관 공식 RSS에서 앱마켓 관련 기사를 직접 수집."""
+    results = {}  # label → [article, ...]
+
+    for src in REGULATORY_SOURCES:
+        label = src["label"]
+        rss_url = src["url"]
+        articles = []
+
+        try:
+            req = Request(rss_url)
+            req.add_header("User-Agent", USER_AGENT)
+            req.add_header("Accept", "application/rss+xml,application/xml,text/xml,*/*")
+            with urlopen(req, timeout=15) as resp:
+                xml_data = resp.read().decode("utf-8", errors="ignore")
+
+            root = ET.fromstring(xml_data)
+            # RSS 2.0: .//item  /  Atom: .//entry
+            items = root.findall(".//{http://www.w3.org/2005/Atom}entry") or root.findall(".//item")
+
+            for item in items[:20]:
+                # 제목
+                title_el = (
+                    item.find("{http://www.w3.org/2005/Atom}title") or
+                    item.find("title")
+                )
+                title_raw = clean_spaces(strip_html(title_el.text if title_el is not None else ""))
+                if not title_raw:
+                    continue
+
+                # 링크
+                link_el = (
+                    item.find("{http://www.w3.org/2005/Atom}link") or
+                    item.find("link")
+                )
+                if link_el is not None:
+                    link = link_el.get("href") or (link_el.text or "").strip()
+                else:
+                    link = ""
+
+                # 날짜
+                date_el = (
+                    item.find("{http://www.w3.org/2005/Atom}updated") or
+                    item.find("{http://www.w3.org/2005/Atom}published") or
+                    item.find("pubDate")
+                )
+                date_text = date_el.text if date_el is not None else ""
+                try:
+                    pub_dt = parsedate_to_datetime(date_text).astimezone(timezone.utc)
+                except Exception:
+                    try:
+                        from datetime import datetime as _dt
+                        pub_dt = _dt.fromisoformat(date_text.replace("Z", "+00:00"))
+                    except Exception:
+                        continue
+                if pub_dt < week_ago_dt:
+                    continue
+                pub_label = pub_dt.strftime("%Y.%m.%d")
+
+                # 설명
+                desc_el = (
+                    item.find("{http://www.w3.org/2005/Atom}summary") or
+                    item.find("{http://www.w3.org/2005/Atom}content") or
+                    item.find("description")
+                )
+                desc_raw = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
+
+                # 관련성 필터: 제목+설명에 앱마켓 관련 키워드가 하나라도 있어야 수집
+                combined = (title_raw + " " + desc_raw).lower()
+                if not any(kw.lower() in combined for kw in REGULATORY_FILTER_KEYWORDS):
+                    continue
+
+                print(f"  [REGULATORY/{label}] {title_raw[:60]}...")
+
+                image, snippet = get_article_info(link) if link else (None, None)
+                summary = snippet or desc_raw
+
+                articles.append({
+                    "title":   title_raw,
+                    "press":   label,
+                    "link":    link,
+                    "summary": summary,
+                    "date":    pub_label,
+                    "score":   15,          # 1차 발표문이므로 높은 점수 고정
+                    "keyword": f"[규제기관] {label}",
+                    "image":   image,
+                    "is_regulatory": True,  # 규제기관 발표 표시 플래그
+                })
+
+            if articles:
+                articles.sort(key=lambda x: x["date"], reverse=True)
+                results[f"[규제기관] {label}"] = articles[:2]  # 기관당 최신 2건
+                print(f"    → {label}: {len(results[f'[규제기관] {label}'])}건 수집")
+
+        except Exception as e:
+            print(f"  [ERROR] {label} RSS 실패: {e}")
+
+    return results
+
 # ── 핵심 요약 ────────────────────────────────────────────────
 POLICY_KEYWORDS = [
     "수수료", "정책", "규제", "법", "인하", "허용", "금지", "의무",
@@ -874,6 +1011,15 @@ def to_html(all_articles):
             if not summary_text or normalize_text(summary_text) == normalize_text(a["title"]):
                 summary_text = _trim(a["title"], 90)
 
+            # 규제기관 발표 카드는 왼쪽 강조선 색상을 파란색으로, 공식발표 배지 추가
+            is_reg = a.get("is_regulatory", False)
+            border_color = "#0369a1" if is_reg else color
+            reg_badge = (
+                '<span style="display:inline-block;background-color:#e0f2fe;color:#0369a1;'
+                'font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;'
+                'margin-left:6px;">📢 공식 발표</span>'
+            ) if is_reg else ""
+
             cards_html += f"""
             <tr>
               <td style="padding:0 32px 10px 32px;">
@@ -884,12 +1030,12 @@ def to_html(all_articles):
                       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
                              style="background-color:#ffffff;border-radius:13px;overflow:hidden;">
                         <tr>
-                          <td width="5" style="background-color:{color};font-size:0;">&nbsp;</td>
+                          <td width="5" style="background-color:{border_color};font-size:0;">&nbsp;</td>
                           {image_td}
                           <td style="padding:12px 18px 12px {text_pl};vertical-align:top;background-color:#ffffff;">
                             <div style="margin-bottom:6px;">
                               <span style="display:inline-block;background-color:{tag_bg};color:{color};
-                                           font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;">{kw}</span>
+                                           font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;">{kw}</span>{reg_badge}
                             </div>
                             <div style="font-size:16px;line-height:24px;color:#111827;font-weight:800;
                                         font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
@@ -1088,6 +1234,16 @@ if __name__ == "__main__":
             top3.sort(key=lambda x: x.get("date", ""), reverse=True)  # 그 안에서 날짜 내림차순
             all_articles[kw] = top3
             print(f"    → {len(all_articles[kw])}건 수집")
+
+    # ── 해외 규제기관 공식 RSS 수집 (Naver/Google과 별도) ──────
+    print("🌐 해외 규제기관 공식 RSS 수집 중... (FTC / CMA / EU / Google Play Blog / Apple Newsroom)")
+    regulatory_articles = fetch_regulatory_articles()
+    if regulatory_articles:
+        all_articles.update(regulatory_articles)
+        reg_count = sum(len(v) for v in regulatory_articles.values())
+        print(f"  → 규제기관 기사 {reg_count}건 추가")
+    else:
+        print("  → 이번 주 관련 규제기관 발표 없음")
 
     print("🔄 전역 중복 제거 중...")
     link_to_entries = defaultdict(list)
