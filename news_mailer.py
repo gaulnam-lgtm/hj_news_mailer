@@ -1152,9 +1152,10 @@ def summarize_core_issues_with_gpt(all_articles, top_n=3):
         payload = json.loads(m.group(0) if m else text)
         issues = payload.get("issues", [])
 
-        cleaned = []
-        seen = set()
-        for line in issues:
+cleaned = []
+seen = set()
+
+for line in issues:
     line = normalize_issue_line(line)
     if not line:
         continue
