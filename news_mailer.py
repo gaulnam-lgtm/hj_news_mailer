@@ -1101,36 +1101,32 @@ def build_issue_source_text(all_articles, max_items_per_keyword=3, max_body_char
 
 def summarize_core_issues_with_gpt(all_articles, top_n=3):
     if not OPENAI_API_KEY:
-        print("ℹ️ OPENAI_API_KEY가 없어 규칙 기반 요약으로 대체합니다.")
-        return []
-
-    if OpenAI is None:
-        print("ℹ️ openai 패키지가 없어 규칙 기반 요약으로 대체합니다.")
         return []
 
     source_text = build_issue_source_text(all_articles)
     if not source_text.strip():
         return []
 
-    prompt = f"""아래는 최근 일주일간 앱마켓 관련 기사/규제 동향 자료다.
+    prompt = f"""
+아래는 최근 일주일간 앱마켓 관련 기사/규제 동향 자료다.
 
 목표:
 - 이번 주 핵심 이슈 {top_n}개 추출
 - 각 항목은 반드시 한 줄
-- 반드시 개조식 (명사형 종결)
-- 문장형 금지 (예: ~했다, ~이다 금지)
-- 말줄임표(...) 절대 금지
-- 문장 끝은 항상 명사형 (예: 정책 변화, 규제 강화, 논의 확대)
+- 반드시 개조식(명사형 종결)으로 작성
+- 문장형 서술 금지(~했다, ~이다 형태 금지)
+- 말줄임표(..., …) 절대 금지
+- 각 항목은 완결된 한 줄 표현으로 작성
+- 기사 문장 복붙 금지, 여러 기사 공통 핵심만 재작성
 - 최대 60자 이내
 - 중복 금지
-- 기사 문장 복붙 금지 (여러 기사 종합해서 재작성)
 
-출력 형식 (JSON만):
+출력 형식(JSON만 반환):
 {{
   "issues": [
-    "앱마켓 수수료 인하 및 외부결제 허용 정책 논의",
-    "인앱결제 강제 금지 법안 반영 정책 변화",
-    "EU·국내 규제기관 앱마켓 규제 집행 강화"
+    "앱마켓 수수료 인하 및 외부결제 허용 논의",
+    "인앱결제 강제 금지법 반영 정책 변화",
+    "국내외 규제기관 앱마켓 규제 집행 강화"
   ]
 }}
 
@@ -1144,6 +1140,7 @@ def summarize_core_issues_with_gpt(all_articles, top_n=3):
             model=OPENAI_MODEL,
             input=prompt,
         )
+
         text = (getattr(resp, "output_text", "") or "").strip()
         if not text:
             return []
@@ -1152,45 +1149,57 @@ def summarize_core_issues_with_gpt(all_articles, top_n=3):
         payload = json.loads(m.group(0) if m else text)
         issues = payload.get("issues", [])
 
-cleaned = []
-seen = set()
+        cleaned = []
+        seen = set()
 
-for line in issues:
-    line = normalize_issue_line(line)
-    if not line:
-        continue
+        for line in issues:
+            line = normalize_issue_line(line)
+            if not line:
+                continue
 
-    norm = normalize_text(line)
-    if norm in seen:
-        continue
+            norm = normalize_text(line)
+            if norm in seen:
+                continue
 
-    seen.add(norm)
-    cleaned.append(line)
+            seen.add(norm)
+            cleaned.append(line)
 
-    if len(cleaned) >= top_n:
-        break
+            if len(cleaned) >= top_n:
+                break
 
         return cleaned
+
     except Exception as e:
         print(f"[ERROR] GPT 핵심 이슈 요약 실패: {e}")
         return []
 
 def normalize_issue_line(line: str) -> str:
-    line = clean_spaces(line)
+    line = clean_spaces(str(line))
 
-    # ... 제거
-    line = line.replace("...", "").replace("…", "")
+    line = line.replace("...", " ").replace("…", " ")
+    line = re.sub(r"\s+", " ", line).strip(" .,-")
 
-    # 문장형 제거
-    line = re.sub(r"(했다|한다|이다|라고|밝혔다|전했다)$", "", line)
+    if not line:
+        return ""
 
-    # 끝이 이상하면 명사형으로 강제
-    if not re.search(r"(정책|논의|강화|확대|변화|추진|도입|검토|집행|부과|완화)$", line):
+    line = re.sub(
+        r"(했다|한다|됐다|되었다|이다|였다|라고 밝혔다|라고 했다|라고 전했다|밝혔다|전했다|나타났다|보인다|예정이다)$",
+        "",
+        line
+    ).strip()
+
+    line = re.sub(r"(은|는|이|가|을|를|에|의|로|으로)$", "", line).strip()
+
+    noun_endings = (
+        "정책", "변화", "강화", "확대", "축소", "도입", "허용", "금지",
+        "검토", "추진", "적용", "집행", "부과", "완화", "논의", "조정",
+        "개편", "시정", "발표", "후속조치", "압박", "제재", "조사", "소송", "이슈"
+    )
+    if not line.endswith(noun_endings):
         line = line.rstrip(". ")
         line += " 관련 이슈"
 
     return line
-
 
 def render_core_issues_html(core_issues):
     if not core_issues:
