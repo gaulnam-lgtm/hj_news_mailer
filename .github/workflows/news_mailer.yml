@@ -32,15 +32,18 @@ jobs:
       - name: 의존성 설치
         run: |
           python -m pip install --upgrade pip
-          pip install Pillow requests beautifulsoup4 lxml
+          pip install Pillow requests beautifulsoup4 lxml openai
 
-      - name: 뉴스 서치 및 메일 발송
-        env:
-          GMAIL_ID: ${{ secrets.GMAIL_ID }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          MAIL_TO: ${{ secrets.MAIL_TO }}
-          MAIL_TO_DAILY: ${{ secrets.MAIL_TO_DAILY }}
-          KEYWORDS: ${{ secrets.KEYWORDS }}
-          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
-          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
-        run: python news_mailer.py --mode ${{ github.event.client_payload.mode || github.event.inputs.mode || 'auto' }}
+- name: 뉴스 서치 및 메일 발송
+  env:
+    GMAIL_ID: ${{ secrets.GMAIL_ID }}
+    GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+    MAIL_TO: ${{ secrets.MAIL_TO }}
+    MAIL_TO_DAILY: ${{ secrets.MAIL_TO_DAILY }}
+    KEYWORDS: ${{ secrets.KEYWORDS }}
+    NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+    NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+
+    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}   # ✅ 추가
+    OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}       # ✅ 추가
+    run: python news_mailer.py --mode ${{ github.event.client_payload.mode || github.event.inputs.mode || 'auto' }}
