@@ -30,6 +30,8 @@ GMAIL_PW = os.environ["GMAIL_APP_PASSWORD"]
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
 
+KST = timezone(timedelta(hours=9))
+today_dt = datetime.now(KST)
 
 mode = "auto"
 if "--mode" in sys.argv:
@@ -59,8 +61,6 @@ KEYWORDS_EXCLUDE  = _load_keywords("keywords_exclude.txt")
 print(f"📋 메인 키워드 {len(KEYWORDS)}개: {KEYWORDS}")
 print(f"📋 플랫폼 키워드 {len(KEYWORDS_PLATFORM)}개 / 제외 키워드 {len(KEYWORDS_EXCLUDE)}개 로드")
 
-KST = timezone(timedelta(hours=9))
-today_dt = datetime.now(KST)
 today = today_dt.strftime("%Y년 %m월 %d일")
 week_ago_dt = today_dt - timedelta(days=7)
 week_ago = week_ago_dt.strftime("%Y년 %m월 %d일")
@@ -989,10 +989,82 @@ def split_sentences(text: str) -> list:
     parts = re.split(r"(?<=[.!?다요음])\s+", text)
     return [p.strip() for p in parts if len(p.strip()) >= 25]
 
+def _compact_bullet_phrase(keyword: str, text: str) -> str:
+    keyword = clean_spaces(keyword)
+    text = clean_spaces(text)
+    source = f"{keyword} {text}"
+
+    rules = [
+        (("수수료", "외부결제"), "앱마켓 수수료 인하 및 외부결제 허용 정책 논의"),
+        (("인앱결제", "금지법"), "인앱결제 강제 금지법 반영 정책 변화"),
+        (("인앱결제", "강제"), "인앱결제 강제 금지 관련 정책 변화"),
+        (("방통위", "구글"), "방통위·구글 앱마켓 정책 협의 및 제도 개선 논의"),
+        (("방송통신위원회", "구글"), "방통위·구글 앱마켓 정책 협의 및 제도 개선 논의"),
+        (("구글", "애플", "인앱결제"), "구글·애플 인앱결제 정책 규제 이슈 부각"),
+        (("DMA",), "유럽연합 DMA 후속 조치 및 앱마켓 규제 집행 강화"),
+        (("디지털시장법",), "디지털시장법 후속 조치 및 앱마켓 규제 집행 강화"),
+        (("FTC",), "미국 FTC 중심 빅테크 앱마켓 규제 기조 강화"),
+        (("CMA",), "영국 CMA 중심 앱마켓 경쟁 규제 논의 확대"),
+        (("EU", "Commission"), "유럽연합 집행위 앱마켓 규제 후속 조치 확대"),
+        (("소송",), "앱마켓 정책 관련 소송 및 규제 리스크 확대"),
+        (("사이드로딩",), "사이드로딩 허용 범위 및 앱마켓 개방 정책 논의"),
+        (("안티스티어링",), "안티스티어링 규제 및 외부결제 허용 기준 논의"),
+    ]
+    for keys, phrase in rules:
+        if all(k.lower() in source.lower() for k in keys):
+            return phrase
+
+    line = sanitize_summary_line(text or keyword)
+    line = re.sub(r'^\[[^\]]+\]\s*', '', line)
+    line = re.sub(r'^<[^>]+>\s*', '', line)
+    line = line.replace("...", " ").replace("…", " ")
+    line = re.sub(r'\s+', ' ', line).strip(' .,-')
+    line = re.split(r'[.;]|\s+-\s+|\s+다만\s+|\s+그러나\s+|\s+한편\s+', line)[0].strip()
+    line = re.sub(r'(했다|한다|됐다|되었다|이다|였다|라고 밝혔다|라고 했다|라고 전했다|밝혔다|전했다|나타났다|보인다|예정이다)$', '', line).strip()
+    line = re.sub(r'(은|는|이|가|을|를|에|의|로|으로)$', '', line).strip()
+    line = re.sub(r'방송통신위원회', '방통위', line)
+    line = re.sub(r'구글과 애플|구글·애플|구글과애플', '구글·애플', line)
+    line = re.sub(r'특정 결제 방식\(인앱결제\)|특정 결제 방식', '인앱결제', line)
+    line = re.sub(r'전기통신사업법을? 위반', '전기통신사업법 위반', line)
+
+    if len(line) > 44:
+        nouns = []
+        candidates = [
+            ('수수료', '수수료 인하'), ('외부결제', '외부결제 허용'), ('인앱결제', '인앱결제'),
+            ('금지법', '강제 금지법'), ('정책', '정책 변화'), ('규제', '규제 강화'),
+            ('방통위', '방통위 협의'), ('구글', '구글 대응'), ('애플', '애플 대응'),
+            ('소송', '소송 리스크'), ('DMA', 'DMA 후속 조치'), ('디지털시장법', 'DMA 후속 조치'),
+        ]
+        low = source.lower()
+        for key, phrase in candidates:
+            if key.lower() in low and phrase not in nouns:
+                nouns.append(phrase)
+        if nouns:
+            line = f"{nouns[0]} 및 {nouns[1]}" if len(nouns) >= 2 else nouns[0]
+
+    line = line.strip(' ,.-')
+    good_endings = ("논의", "강화", "변화", "허용", "금지", "확대", "추진", "개선", "조치", "위반", "부각", "리스크", "대응")
+    if line and not line.endswith(good_endings):
+        if '정책' in line and not line.endswith('변화'):
+            line = re.sub(r'정책$', '정책 변화', line)
+        elif '규제' in line and not line.endswith('강화'):
+            line = re.sub(r'규제$', '규제 강화', line)
+        elif '수수료' in line and '외부결제' in line:
+            line = '앱마켓 수수료 인하 및 외부결제 허용 정책 논의'
+        elif '인앱결제' in line:
+            line = '인앱결제 관련 정책 변화'
+        elif keyword:
+            line = f"{keyword} 관련 정책 변화"
+        else:
+            line = f"{line} 논의"
+
+    return line[:48].strip()
+
+
 def extract_issue_line(keyword: str, merged_text: str) -> str:
     sents = split_sentences(merged_text)
     if not sents:
-        return clean_spaces(keyword)
+        return _compact_bullet_phrase(keyword, keyword)
 
     best_sent = ""
     best_score = -1
@@ -1012,7 +1084,7 @@ def extract_issue_line(keyword: str, merged_text: str) -> str:
             if normalize_text(p) in norm:
                 score += 2
 
-        if 35 <= len(sent) <= 110:
+        if 20 <= len(sent) <= 140:
             score += 2
 
         if sent.endswith(("다.", "됐다.", "한다.", "늘었다.", "허용했다.", "강화했다.", "부과했다.")):
@@ -1022,19 +1094,7 @@ def extract_issue_line(keyword: str, merged_text: str) -> str:
             best_score = score
             best_sent = sent
 
-    best_sent = sanitize_summary_line(best_sent)
-
-    # 🔥 핵심: 문장 완결 보장 + 개조식 변환
-    best_sent = re.sub(
-        r"(했다|한다|됐다|되었다|이다|였다|라고 밝혔다|라고 했다|라고 전했다|밝혔다|전했다|나타났다|보인다|예정이다)$",
-        "",
-        best_sent
-    ).strip()
-
-    # 조사 제거
-    best_sent = re.sub(r"(은|는|이|가|을|를|에|의|로|으로)$", "", best_sent).strip()
-
-    return best_sent
+    return _compact_bullet_phrase(keyword, best_sent)
 
 def build_core_issues(all_articles, top_n=3):
     buckets = []
@@ -1184,52 +1244,8 @@ def summarize_core_issues_with_gpt(all_articles, top_n=3):
         print(f"[ERROR] GPT 핵심 이슈 요약 실패: {e}")
         return []
 
-def normalize_issue_line(line: str) -> str:
-    line = clean_spaces(str(line))
-
-    # 말줄임 제거
-    line = line.replace("...", " ").replace("…", " ")
-    line = re.sub(r"\s+", " ", line).strip(" .,-")
-
-    if not line:
-        return ""
-
-    # 앞쪽 불필요 제거
-    line = re.sub(r"^\[[^\]]+\]\s*", "", line)
-    line = re.sub(r"^<[^>]+>\s*", "", line)
-
-    # 문장형 → 개조식 변환
-    line = re.sub(
-        r"(했다|한다|됐다|되었다|이다|였다|라고 밝혔다|라고 했다|라고 전했다|밝혔다|전했다|나타났다|보인다|예정이다)",
-        "",
-        line
-    ).strip()
-
-    # 조사 제거
-    line = re.sub(r"(은|는|이|가|을|를|에|의|로|으로)$", "", line).strip()
-
-    # 너무 긴 문장 축약
-    if len(line) > 60:
-        cut = line[:60]
-        for sep in (" 및 ", " 와 ", " 과 ", " 관련 ", " 정책 ", " 규제 "):
-            idx = cut.rfind(sep)
-            if idx > 20:
-                cut = cut[:idx]
-                break
-        line = cut.strip()
-
-    # 핵심 키워드 형태로 정리
-    replacements = [
-        (r"방송통신위원회.*?구글", "방통위 구글"),
-        (r"구글.*?애플", "구글·애플"),
-        (r"특정 결제 방식", "인앱결제"),
-        (r"강제.*?방지법", "인앱결제 강제 금지법"),
-    ]
-
-    for pattern, repl in replacements:
-        line = re.sub(pattern, repl, line)
-
-    return line
+def normalize_issue_line(line: str, keyword: str = "") -> str:
+    return _compact_bullet_phrase(keyword, line)
 
 def render_core_issues_html(core_issues):
     if not core_issues:
@@ -1242,11 +1258,10 @@ def render_core_issues_html(core_issues):
     rows = ""
     for idx, item in enumerate(core_issues, start=1):
         if isinstance(item, dict):
-            line = clean_spaces(item.get("line", ""))
             keyword = clean_spaces(item.get("keyword", ""))
-            line_html = f'<span style="font-weight:700;color:#4f46e5;">[{keyword}]</span> {line}' if keyword else line
+            line_html = normalize_issue_line(item.get("line", ""), keyword)
         else:
-            line_html = clean_spaces(str(item))
+            line_html = normalize_issue_line(str(item))
 
         rows += f"""
         <tr>
@@ -1596,10 +1611,7 @@ if __name__ == "__main__":
     core_issues = summarize_core_issues_with_gpt(all_articles, top_n=3)
 
     if not core_issues:
-        core_issues = [
-            normalize_issue_line(x["line"])
-            for x in build_core_issues(all_articles, top_n=3)
-        ]
+        core_issues = build_core_issues(all_articles, top_n=3)
 
     inline_images = prepare_inline_images(all_articles)
     html = to_html(all_articles, core_issues)
