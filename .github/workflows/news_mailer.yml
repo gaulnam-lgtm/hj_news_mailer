@@ -55,4 +55,4 @@ jobs:
           if [ -z "$MODE" ]; then
             MODE="auto"
           fi
-          python news_mailer_ai_summary_gpt.py --mode "$MODE"
+          python news_mailer.py --mode "$MODE"
