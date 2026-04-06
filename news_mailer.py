@@ -25,12 +25,18 @@ GMAIL_PW = os.environ["GMAIL_APP_PASSWORD"]
 mode = "auto"
 if "--mode" in sys.argv:
     mode = sys.argv[sys.argv.index("--mode") + 1]
+
+KST = timezone(timedelta(hours=9))
+today_dt = datetime.now(KST)
+
 if mode == "auto":
     mode = "weekly" if today_dt.weekday() == 0 else "daily"
+
 if mode == "daily":
     MAIL_TO = os.environ["MAIL_TO_DAILY"]
 else:
     MAIL_TO = os.environ["MAIL_TO"]
+
 NAVER_CLIENT_ID = os.environ["NAVER_CLIENT_ID"]
 NAVER_CLIENT_SECRET = os.environ["NAVER_CLIENT_SECRET"]
 MIN_ARTICLE_SCORE = int(os.environ.get("MIN_ARTICLE_SCORE", "7"))
@@ -50,8 +56,6 @@ KEYWORDS_EXCLUDE  = _load_keywords("keywords_exclude.txt")
 print(f"📋 메인 키워드 {len(KEYWORDS)}개: {KEYWORDS}")
 print(f"📋 플랫폼 키워드 {len(KEYWORDS_PLATFORM)}개 / 제외 키워드 {len(KEYWORDS_EXCLUDE)}개 로드")
 
-KST = timezone(timedelta(hours=9))
-today_dt = datetime.now(KST)
 today = today_dt.strftime("%Y년 %m월 %d일")
 week_ago_dt = today_dt - timedelta(days=7)
 week_ago = week_ago_dt.strftime("%Y년 %m월 %d일")
