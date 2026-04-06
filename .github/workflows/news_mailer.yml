@@ -43,4 +43,4 @@ jobs:
           KEYWORDS: ${{ secrets.KEYWORDS }}
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
-        run: python news_mailer.py --mode ${{ github.event.client_payload.mode || github.event.inputs.mode || 'daily' }}
+        run: python news_mailer.py --mode ${{ github.event.client_payload.mode || github.event.inputs.mode || 'auto' }}
