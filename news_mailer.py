@@ -1176,44 +1176,52 @@ def summarize_core_issues_with_gpt(all_articles, top_n=3):
 def normalize_issue_line(line: str) -> str:
     line = clean_spaces(str(line))
 
-    # 말줄임표 제거
+    # 말줄임 제거
     line = line.replace("...", " ").replace("…", " ")
     line = re.sub(r"\s+", " ", line).strip(" .,-")
 
     if not line:
         return ""
 
-    # 앞쪽 태그/군더더기 제거
+    # 앞쪽 불필요 제거
     line = re.sub(r"^\[[^\]]+\]\s*", "", line)
     line = re.sub(r"^<[^>]+>\s*", "", line)
 
-    # 서술형 종결 제거
+    # 문장형 → 개조식 변환
     line = re.sub(
-        r"(했다|한다|됐다|되었다|이다|였다|라고 밝혔다|라고 했다|라고 전했다|밝혔다|전했다|나타났다|보인다|예정이다)$",
+        r"(했다|한다|됐다|되었다|이다|였다|라고 밝혔다|라고 했다|라고 전했다|밝혔다|전했다|나타났다|보인다|예정이다)",
         "",
         line
     ).strip()
 
-    # 조사가 끝에 남은 경우 정리
+    # 조사 제거
     line = re.sub(r"(은|는|이|가|을|를|에|의|로|으로)$", "", line).strip()
 
-    # 너무 길면 마지막 조사/어미 이전까지만 정리
+    # 너무 긴 문장 축약
     if len(line) > 60:
         cut = line[:60]
-        for sep in (" 관련 ", " 및 ", " 와 ", " 과 ", " 에 ", " 의 ", " 로 ", "으로 "):
+        for sep in (" 및 ", " 와 ", " 과 ", " 관련 ", " 정책 ", " 규제 "):
             idx = cut.rfind(sep)
-            if idx > 25:
+            if idx > 20:
                 cut = cut[:idx]
                 break
-        line = cut.strip(" .,-")
+        line = cut.strip()
 
-    noun_endings = (
-        "정책", "변화", "강화", "확대", "축소", "도입", "허용", "금지",
-        "검토", "추진", "적용", "집행", "부과", "완화", "논의", "조정",
-        "개편", "시정", "발표", "후속조치", "압박", "제재", "조사", "소송", "이슈"
-    )
-    if not line.endswith(noun_endings):
-        line += " 관련 이슈"
+    # 핵심 키워드 형태로 정리
+    replacements = [
+        (r"방송통신위원회.*?구글", "방통위 구글"),
+        (r"구글.*?애플", "구글·애플"),
+        (r"특정 결제 방식", "인앱결제"),
+        (r"강제.*?방지법", "인앱결제 강제 금지법"),
+    ]
+
+    for pattern, repl in replacements:
+        line = re.sub(pattern, repl, line)
+
+    # 완전 개조식 보정
+    if not re.search(r"(정책|규제|논의|강화|변화|이슈|조치)$", line):
+        line = line.rstrip(". ")
+        line += " 이슈"
 
     return line
 
