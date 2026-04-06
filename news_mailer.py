@@ -1577,17 +1577,17 @@ if __name__ == "__main__":
     for v in all_articles.values():
         v.sort(key=lambda x: x.get("date", ""), reverse=True)
     total_found = sum(len(v) for v in all_articles.values())
-print(f"✅ 중복 제거 완료 (제거: {removed_count}건, 최종: {total_found}건)")
+    print(f"✅ 중복 제거 완료 (제거: {removed_count}건, 최종: {total_found}건)")
 
-core_issues = summarize_core_issues_with_gpt(all_articles, top_n=3)
+    core_issues = summarize_core_issues_with_gpt(all_articles, top_n=3)
 
-if not core_issues:
-    core_issues = [
-        normalize_issue_line(x["line"])
-        for x in build_core_issues(all_articles, top_n=3)
-    ]
+    if not core_issues:
+        core_issues = [
+            normalize_issue_line(x["line"])
+            for x in build_core_issues(all_articles, top_n=3)
+        ]
 
-inline_images = prepare_inline_images(all_articles)
+    inline_images = prepare_inline_images(all_articles)
     html = to_html(all_articles, core_issues)
     send_mail(html, inline_images)
     print(f"✅ 전체 완료 (발송 기사: {total_found}건)")
