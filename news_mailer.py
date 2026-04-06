@@ -1115,24 +1115,22 @@ def summarize_core_issues_with_gpt(all_articles, top_n=3):
     prompt = f"""아래는 최근 일주일간 앱마켓 관련 기사/규제 동향 자료다.
 
 목표:
-- 이번 주 핵심 이슈 {top_n}개만 추출
+- 이번 주 핵심 이슈 {top_n}개 추출
 - 각 항목은 반드시 한 줄
-- 서술식 문장 말고 개조식
-- 문장 끝은 명사형 또는 간결한 개조식으로 마무리
-- 말줄임표(...) 금지
-- 서로 중복 금지
-- 기사 제목 복붙 금지
-- 여러 기사에 공통으로 나타난 핵심 변화와 규제 흐름 중심으로 요약
-- 구글/애플 정책 변경, 인앱결제, 외부결제, 수수료, DMA, 규제기관 조치, 소송, 방통위/공정위 이슈 우선 반영
-- 각 항목은 70자 이내 권장
-- 출력은 오직 JSON만 반환
+- 반드시 개조식 (명사형 종결)
+- 문장형 금지 (예: ~했다, ~이다 금지)
+- 말줄임표(...) 절대 금지
+- 문장 끝은 항상 명사형 (예: 정책 변화, 규제 강화, 논의 확대)
+- 최대 60자 이내
+- 중복 금지
+- 기사 문장 복붙 금지 (여러 기사 종합해서 재작성)
 
-형식:
+출력 형식 (JSON만):
 {{
   "issues": [
-    "이슈 1",
-    "이슈 2",
-    "이슈 3"
+    "앱마켓 수수료 인하 및 외부결제 허용 정책 논의",
+    "인앱결제 강제 금지 법안 반영 정책 변화",
+    "EU·국내 규제기관 앱마켓 규제 집행 강화"
   ]
 }}
 
@@ -1157,23 +1155,40 @@ def summarize_core_issues_with_gpt(all_articles, top_n=3):
         cleaned = []
         seen = set()
         for line in issues:
-            line = clean_spaces(str(line))
-            line = line.replace("...", " ").replace("…", " ")
-            line = re.sub(r"\s+", " ", line).strip(" .,-")
-            if not line:
-                continue
-            norm = normalize_text(line)
-            if norm in seen:
-                continue
-            seen.add(norm)
-            cleaned.append(line)
-            if len(cleaned) >= top_n:
-                break
+    line = normalize_issue_line(line)
+    if not line:
+        continue
+
+    norm = normalize_text(line)
+    if norm in seen:
+        continue
+
+    seen.add(norm)
+    cleaned.append(line)
+
+    if len(cleaned) >= top_n:
+        break
 
         return cleaned
     except Exception as e:
         print(f"[ERROR] GPT 핵심 이슈 요약 실패: {e}")
         return []
+
+def normalize_issue_line(line: str) -> str:
+    line = clean_spaces(line)
+
+    # ... 제거
+    line = line.replace("...", "").replace("…", "")
+
+    # 문장형 제거
+    line = re.sub(r"(했다|한다|이다|라고|밝혔다|전했다)$", "", line)
+
+    # 끝이 이상하면 명사형으로 강제
+    if not re.search(r"(정책|논의|강화|확대|변화|추진|도입|검토|집행|부과|완화)$", line):
+        line = line.rstrip(". ")
+        line += " 관련 이슈"
+
+    return line
 
 
 def render_core_issues_html(core_issues):
