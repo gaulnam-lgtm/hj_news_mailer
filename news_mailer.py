@@ -19,9 +19,18 @@ from collections import defaultdict
 from xml.etree import ElementTree as ET
 from PIL import Image, ImageOps, ImageFile
 
+try:
+    from openai import OpenAI
+except Exception:
+    OpenAI = None
+
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
 GMAIL_PW = os.environ["GMAIL_APP_PASSWORD"]
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
+
+
 mode = "auto"
 if "--mode" in sys.argv:
     mode = sys.argv[sys.argv.index("--mode") + 1]
@@ -1065,6 +1074,108 @@ def build_core_issues(all_articles, top_n=3):
 
     return top
 
+def build_issue_source_text(all_articles, max_items_per_keyword=3, max_body_chars=1200, max_chars=18000):
+    parts = []
+
+    for kw, articles in all_articles.items():
+        for a in articles[:max_items_per_keyword]:
+            title = clean_spaces(a.get("title", ""))
+            summary = clean_spaces(a.get("summary", ""))
+            body = clean_spaces(a.get("body", ""))[:max_body_chars]
+            press = clean_spaces(a.get("press", ""))
+            date = clean_spaces(a.get("date", ""))
+
+            block = f"""
+[키워드] {kw}
+[제목] {title}
+[언론사] {press}
+[날짜] {date}
+[요약] {summary}
+[본문] {body}
+""".strip()
+            parts.append(block)
+
+    merged = "\n\n".join(parts)
+    return merged[:max_chars]
+
+
+def summarize_core_issues_with_gpt(all_articles, top_n=3):
+    if not OPENAI_API_KEY:
+        print("ℹ️ OPENAI_API_KEY가 없어 규칙 기반 요약으로 대체합니다.")
+        return []
+
+    if OpenAI is None:
+        print("ℹ️ openai 패키지가 없어 규칙 기반 요약으로 대체합니다.")
+        return []
+
+    source_text = build_issue_source_text(all_articles)
+    if not source_text.strip():
+        return []
+
+    prompt = f"""아래는 최근 일주일간 앱마켓 관련 기사/규제 동향 자료다.
+
+목표:
+- 이번 주 핵심 이슈 {top_n}개만 추출
+- 각 항목은 반드시 한 줄
+- 서술식 문장 말고 개조식
+- 문장 끝은 명사형 또는 간결한 개조식으로 마무리
+- 말줄임표(...) 금지
+- 서로 중복 금지
+- 기사 제목 복붙 금지
+- 여러 기사에 공통으로 나타난 핵심 변화와 규제 흐름 중심으로 요약
+- 구글/애플 정책 변경, 인앱결제, 외부결제, 수수료, DMA, 규제기관 조치, 소송, 방통위/공정위 이슈 우선 반영
+- 각 항목은 70자 이내 권장
+- 출력은 오직 JSON만 반환
+
+형식:
+{{
+  "issues": [
+    "이슈 1",
+    "이슈 2",
+    "이슈 3"
+  ]
+}}
+
+자료:
+{source_text}
+"""
+
+    try:
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        resp = client.responses.create(
+            model=OPENAI_MODEL,
+            input=prompt,
+        )
+        text = (getattr(resp, "output_text", "") or "").strip()
+        if not text:
+            return []
+
+        m = re.search(r'\{[\s\S]*\}', text)
+        payload = json.loads(m.group(0) if m else text)
+        issues = payload.get("issues", [])
+
+        cleaned = []
+        seen = set()
+        for line in issues:
+            line = clean_spaces(str(line))
+            line = line.replace("...", " ").replace("…", " ")
+            line = re.sub(r"\s+", " ", line).strip(" .,-")
+            if not line:
+                continue
+            norm = normalize_text(line)
+            if norm in seen:
+                continue
+            seen.add(norm)
+            cleaned.append(line)
+            if len(cleaned) >= top_n:
+                break
+
+        return cleaned
+    except Exception as e:
+        print(f"[ERROR] GPT 핵심 이슈 요약 실패: {e}")
+        return []
+
+
 def render_core_issues_html(core_issues):
     if not core_issues:
         return """
@@ -1075,6 +1186,13 @@ def render_core_issues_html(core_issues):
 
     rows = ""
     for idx, item in enumerate(core_issues, start=1):
+        if isinstance(item, dict):
+            line = clean_spaces(item.get("line", ""))
+            keyword = clean_spaces(item.get("keyword", ""))
+            line_html = f'<span style="font-weight:700;color:#4f46e5;">[{keyword}]</span> {line}' if keyword else line
+        else:
+            line_html = clean_spaces(str(item))
+
         rows += f"""
         <tr>
           <td style="padding:0 0 10px 0;">
@@ -1086,8 +1204,7 @@ def render_core_issues_html(core_issues):
                 </td>
                 <td style="padding:10px 14px;background-color:#ffffff;border:1px solid #e5e7eb;border-left:none;
                            border-radius:0 8px 8px 0;font-size:14px;line-height:22px;color:#1f2937;">
-                  <span style="font-weight:700;color:#4f46e5;">[{item['keyword']}]</span>
-                  {item['line']}
+                  {line_html}
                 </td>
               </tr>
             </table>
@@ -1421,7 +1538,10 @@ if __name__ == "__main__":
     total_found = sum(len(v) for v in all_articles.values())
     print(f"✅ 중복 제거 완료 (제거: {removed_count}건, 최종: {total_found}건)")
 
-    core_issues = build_core_issues(all_articles, top_n=3)
+    core_issues = summarize_core_issues_with_gpt(all_articles, top_n=3)
+    if not core_issues:
+        core_issues = build_core_issues(all_articles, top_n=3)
+
     inline_images = prepare_inline_images(all_articles)
     html = to_html(all_articles, core_issues)
     send_mail(html, inline_images)
