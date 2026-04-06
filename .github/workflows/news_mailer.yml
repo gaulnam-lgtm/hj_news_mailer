@@ -2,13 +2,14 @@ name: 주간 앱 마켓 뉴스레터 발송
 
 on:
   repository_dispatch:
-    types: [cron-trigger]
+    types:
+      - cron-trigger
   workflow_dispatch:
     inputs:
       mode:
-        description: '발송 모드'
+        description: "발송 모드"
         required: true
-        default: 'daily'
+        default: "daily"
         type: choice
         options:
           - daily
@@ -20,30 +21,38 @@ env:
 jobs:
   send-news:
     runs-on: ubuntu-latest
+
     steps:
       - name: 저장소 체크아웃
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Python 설치
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: 의존성 설치
         run: |
           python -m pip install --upgrade pip
           pip install Pillow requests beautifulsoup4 lxml openai
 
-- name: 뉴스 서치 및 메일 발송
-  env:
-    GMAIL_ID: ${{ secrets.GMAIL_ID }}
-    GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-    MAIL_TO: ${{ secrets.MAIL_TO }}
-    MAIL_TO_DAILY: ${{ secrets.MAIL_TO_DAILY }}
-    KEYWORDS: ${{ secrets.KEYWORDS }}
-    NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
-    NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
-
-OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-    run: python news_mailer.py --mode ${{ github.event.client_payload.mode || github.event.inputs.mode || 'auto' }}
+      - name: 뉴스 서치 및 메일 발송
+        env:
+          GMAIL_ID: ${{ secrets.GMAIL_ID }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          MAIL_TO_DAILY: ${{ secrets.MAIL_TO_DAILY }}
+          KEYWORDS: ${{ secrets.KEYWORDS }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+        run: |
+          MODE="${{ github.event.client_payload.mode }}"
+          if [ -z "$MODE" ]; then
+            MODE="${{ github.event.inputs.mode }}"
+          fi
+          if [ -z "$MODE" ]; then
+            MODE="auto"
+          fi
+          python news_mailer_ai_summary_gpt.py --mode "$MODE"
