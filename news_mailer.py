@@ -992,7 +992,7 @@ def split_sentences(text: str) -> list:
 def extract_issue_line(keyword: str, merged_text: str) -> str:
     sents = split_sentences(merged_text)
     if not sents:
-        return _trim(keyword, 60)
+        return clean_spaces(keyword)
 
     best_sent = ""
     best_score = -1
@@ -1023,7 +1023,18 @@ def extract_issue_line(keyword: str, merged_text: str) -> str:
             best_sent = sent
 
     best_sent = sanitize_summary_line(best_sent)
-    return _trim(best_sent, 70)
+
+    # 🔥 핵심: 문장 완결 보장 + 개조식 변환
+    best_sent = re.sub(
+        r"(했다|한다|됐다|되었다|이다|였다|라고 밝혔다|라고 했다|라고 전했다|밝혔다|전했다|나타났다|보인다|예정이다)$",
+        "",
+        best_sent
+    ).strip()
+
+    # 조사 제거
+    best_sent = re.sub(r"(은|는|이|가|을|를|에|의|로|으로)$", "", best_sent).strip()
+
+    return best_sent
 
 def build_core_issues(all_articles, top_n=3):
     buckets = []
