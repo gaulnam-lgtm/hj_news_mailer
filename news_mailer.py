@@ -25,18 +25,12 @@ GMAIL_PW = os.environ["GMAIL_APP_PASSWORD"]
 mode = "auto"
 if "--mode" in sys.argv:
     mode = sys.argv[sys.argv.index("--mode") + 1]
-
-KST = timezone(timedelta(hours=9))
-today_dt = datetime.now(KST)
-
 if mode == "auto":
     mode = "weekly" if today_dt.weekday() == 0 else "daily"
-
 if mode == "daily":
     MAIL_TO = os.environ["MAIL_TO_DAILY"]
 else:
     MAIL_TO = os.environ["MAIL_TO"]
-
 NAVER_CLIENT_ID = os.environ["NAVER_CLIENT_ID"]
 NAVER_CLIENT_SECRET = os.environ["NAVER_CLIENT_SECRET"]
 MIN_ARTICLE_SCORE = int(os.environ.get("MIN_ARTICLE_SCORE", "7"))
@@ -56,6 +50,8 @@ KEYWORDS_EXCLUDE  = _load_keywords("keywords_exclude.txt")
 print(f"📋 메인 키워드 {len(KEYWORDS)}개: {KEYWORDS}")
 print(f"📋 플랫폼 키워드 {len(KEYWORDS_PLATFORM)}개 / 제외 키워드 {len(KEYWORDS_EXCLUDE)}개 로드")
 
+KST = timezone(timedelta(hours=9))
+today_dt = datetime.now(KST)
 today = today_dt.strftime("%Y년 %m월 %d일")
 week_ago_dt = today_dt - timedelta(days=7)
 week_ago = week_ago_dt.strftime("%Y년 %m월 %d일")
@@ -297,10 +293,48 @@ def extract_candidate_snippets_from_html(html: str) -> list:
         cleaned.append(txt)
     return cleaned
 
+
+
+def extract_article_text_from_html(html: str) -> str:
+    blocks = []
+
+    patterns = [
+        r"<article[^>]*>(.*?)</article>",
+        r"<div[^>]*class=[\"']?[^\"']*(?:article|article_body|articleBody|newsct_article|story|content|view|detail|post-content|entry-content)[^\"']*[\"']?[^>]*>(.*?)</div>",
+        r"<section[^>]*class=[\"']?[^\"']*(?:article|content|story|view|detail)[^\"']*[\"']?[^>]*>(.*?)</section>",
+    ]
+
+    for pat in patterns:
+        for m in re.finditer(pat, html, re.IGNORECASE | re.DOTALL):
+            txt = clean_spaces(strip_html(" ".join(g for g in m.groups() if g)))
+            if len(txt) >= 200:
+                blocks.append(txt)
+
+    if not blocks:
+        paras = []
+        for m in re.finditer(r"<p[^>]*>(.*?)</p>", html, re.IGNORECASE | re.DOTALL):
+            txt = clean_spaces(strip_html(m.group(1)))
+            if len(txt) >= 40:
+                paras.append(txt)
+        joined = " ".join(paras)
+        if len(joined) >= 200:
+            blocks.append(joined)
+
+    if not blocks:
+        return ""
+
+    blocks.sort(key=len, reverse=True)
+    text = blocks[0]
+
+    text = re.sub(r"\[[^\]]+\]", " ", text)
+    text = re.sub(r"(무단전재|재배포 금지|저작권자.*?금지)", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
 # ── 기사 정보 추출 (기존 그대로) ─────────────────────────────
 def get_article_info(url: str, depth=0) -> tuple:
     if not url or not url.startswith("http") or depth > 3:
-        return None, None
+        return None, None, ""
     try:
         req = Request(url)
         req.add_header("User-Agent", GOOGLEBOT_UA)
@@ -320,7 +354,7 @@ def get_article_info(url: str, depth=0) -> tuple:
                 real_url = m.group(1).replace("&amp;", "&")
                 if real_url and real_url != url:
                     return get_article_info(real_url, depth=depth + 1)
-            return None, None
+            return None, None, ""
 
         def extract_meta(html_text, meta_name):
             pat1 = rf"<meta\s+[^>]*?(?:property|name)\s*=\s*[\"']{meta_name}[\"'][^>]*?content\s*=\s*[\"']([^\"']+)[\"']"
@@ -409,10 +443,11 @@ def get_article_info(url: str, depth=0) -> tuple:
             if html_candidates:
                 snippet = html_candidates[0]
 
-        return image, snippet
+        article_text = extract_article_text_from_html(html)
+        return image, snippet, article_text
 
     except Exception:
-        return None, None
+        return None, None, ""
 
 def optimize_thumbnail_bytes(data: bytes, subtype: str, display_w: int = THUMB_DISPLAY_W, display_h: int = THUMB_DISPLAY_H,
                              max_w: int = THUMB_MAX_W, max_h: int = THUMB_MAX_H, target_bytes: int = THUMB_TARGET_BYTES):
@@ -654,14 +689,14 @@ def fetch_naver_articles(keyword):
         score = score_article(keyword, title, desc)
         print(f"  [NAVER/{keyword}] ({score}) {title[:50]}...")
 
-        image, snippet = get_article_info(link)
+        image, snippet, article_text = get_article_info(link)
 
         if not desc or normalize_text(desc) == normalize_text(title):
             desc = snippet or ""
 
         articles.append({
             "title": title, "press": press, "link": link,
-            "summary": desc, "date": pub_label,
+            "summary": desc, "body": article_text, "date": pub_label,
             "score": score, "keyword": keyword, "image": image
         })
 
@@ -723,7 +758,7 @@ def fetch_google_articles(keyword):
             score = score_article(keyword, title, desc_raw)
             print(f"  [GOOGLE/{keyword}] ({score}) {title[:50]}...")
 
-            image, snippet = get_article_info(real_link or link)
+            image, snippet, article_text = get_article_info(real_link or link)
 
             desc = desc_raw
             if not desc or normalize_text(desc).startswith(normalize_text(title)):
@@ -731,7 +766,7 @@ def fetch_google_articles(keyword):
 
             articles.append({
                 "title": title, "press": press, "link": link,
-                "summary": desc, "date": pub_label,
+                "summary": desc, "body": article_text, "date": pub_label,
                 "score": score, "keyword": keyword, "image": image
             })
 
@@ -856,7 +891,7 @@ def fetch_regulatory_articles():
 
                 print(f"  [REGULATORY/{label}] {title_raw[:60]}...")
 
-                image, snippet = get_article_info(link) if link else (None, None)
+                image, snippet, article_text = get_article_info(link) if link else (None, None, "")
                 summary = snippet or desc_raw
 
                 articles.append({
@@ -864,6 +899,7 @@ def fetch_regulatory_articles():
                     "press":   label,
                     "link":    link,
                     "summary": summary,
+                    "body":    article_text,
                     "date":    pub_label,
                     "score":   15,          # 1차 발표문이므로 높은 점수 고정
                     "keyword": f"[규제기관] {label}",
@@ -932,58 +968,138 @@ def _trim(text: str, max_len: int) -> str:
             cut = cut[:idx]
             break
     return cut.rstrip(" ,，.。") + "…"
-def build_summary_html(all_articles):
-    items = []
-    seen_texts = set()
+STOPWORDS = {
+    "있다","했다","한다","위해","통해","대한","관련","이번","지난","이날",
+    "기자","보도","뉴스","기사","정부","업계","서비스","플랫폼","시장"
+}
+
+def split_sentences(text: str) -> list:
+    text = clean_spaces(text)
+    if not text:
+        return []
+    parts = re.split(r"(?<=[.!?다요음])\s+", text)
+    return [p.strip() for p in parts if len(p.strip()) >= 25]
+
+def extract_issue_line(keyword: str, merged_text: str) -> str:
+    sents = split_sentences(merged_text)
+    if not sents:
+        return _trim(keyword, 60)
+
+    best_sent = ""
+    best_score = -1
+
+    for sent in sents:
+        score = 0
+        norm = normalize_text(sent)
+
+        if normalize_text(keyword) in norm:
+            score += 6
+
+        for pk in POLICY_KEYWORDS:
+            if normalize_text(pk) in norm:
+                score += 2
+
+        for p in KEYWORDS_PLATFORM:
+            if normalize_text(p) in norm:
+                score += 2
+
+        if 35 <= len(sent) <= 110:
+            score += 2
+
+        if sent.endswith(("다.", "됐다.", "한다.", "늘었다.", "허용했다.", "강화했다.", "부과했다.")):
+            score += 1
+
+        if score > best_score:
+            best_score = score
+            best_sent = sent
+
+    best_sent = sanitize_summary_line(best_sent)
+    return _trim(best_sent, 70)
+
+def build_core_issues(all_articles, top_n=3):
+    buckets = []
 
     for kw, articles in all_articles.items():
-        for a in articles:
-            src = a.get("summary") or ""
-            line = extract_best_sentence(src, a.get("title", ""))
-            if not line or line in seen_texts:
-                continue
-            seen_texts.add(line)
-            priority = sum(1 for pk in POLICY_KEYWORDS if pk in line or pk in a.get("title",""))
-            items.append((priority, line))
+        merged_text_parts = []
+        total_score = 0
 
-    items.sort(key=lambda x: -x[0])
-    top3 = []
-    seen2 = set()
-    for _, line in items:
-        line = sanitize_summary_line(line)
-        if not line or line in seen2:
+        for a in articles:
+            body = clean_spaces(a.get("body", ""))
+            summary = clean_spaces(a.get("summary", ""))
+            title = clean_spaces(a.get("title", ""))
+
+            if body:
+                merged_text_parts.append(body)
+            elif summary:
+                merged_text_parts.append(summary)
+            elif title:
+                merged_text_parts.append(title)
+
+            total_score += a.get("score", 0)
+
+        merged_text = " ".join(merged_text_parts).strip()
+        if not merged_text:
             continue
-        seen2.add(line)
-        top3.append(line)
-        if len(top3) >= 3:
+
+        line = extract_issue_line(kw, merged_text)
+        bucket_score = total_score + len(articles) * 3
+
+        buckets.append({
+            "keyword": kw,
+            "line": line,
+            "score": bucket_score
+        })
+
+    buckets.sort(key=lambda x: x["score"], reverse=True)
+
+    top = []
+    seen = set()
+    for item in buckets:
+        norm = normalize_text(item["line"])
+        if not norm or norm in seen:
+            continue
+        seen.add(norm)
+        top.append(item)
+        if len(top) >= top_n:
             break
 
-    if not top3:
-        return '<div style="font-size:14px;color:#94a3b8;padding:4px 0;">이번 주 주요 내용을 찾지 못했습니다.</div>'
+    return top
 
-    accent_colors = ["#475569"] * 3
+def render_core_issues_html(core_issues):
+    if not core_issues:
+        return """
+        <div style="font-size:14px;color:#94a3b8;padding:4px 0;">
+          이번 주 핵심 이슈를 추출하지 못했습니다.
+        </div>
+        """
+
     rows = ""
-    for i, line in enumerate(top3):
-        color = accent_colors[i % len(accent_colors)]
+    for idx, item in enumerate(core_issues, start=1):
         rows += f"""
         <tr>
           <td style="padding:0 0 10px 0;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
-                <td width="4" style="background-color:{color};border-radius:3px;">&nbsp;</td>
-                <td style="padding:10px 14px;background-color:#ffffff;border-radius:0 8px 8px 0;
-                            font-size:14px;line-height:22px;color:#1e293b;border:1px solid #e5e7eb;border-left:none;">
-                  {line}
+                <td width="34" align="center"
+                    style="background:#111827;color:#ffffff;font-size:13px;font-weight:800;border-radius:8px 0 0 8px;">
+                  {idx}
+                </td>
+                <td style="padding:10px 14px;background-color:#ffffff;border:1px solid #e5e7eb;border-left:none;
+                           border-radius:0 8px 8px 0;font-size:14px;line-height:22px;color:#1f2937;">
+                  <span style="font-weight:700;color:#4f46e5;">[{item['keyword']}]</span>
+                  {item['line']}
                 </td>
               </tr>
             </table>
           </td>
-        </tr>"""
+        </tr>
+        """
 
-    return f"""<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">{rows}</table>"""
+    return f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">{rows}</table>'
+
 
 # ── HTML 생성 (5가지 요청 모두 적용) ────────────────────────
-def to_html(all_articles):
+def to_html(all_articles, core_issues):
     palette = ["#4f46e5", "#db2777", "#d97706", "#059669", "#2563eb", "#dc2626", "#7c3aed", "#0891b2"]
     kw_colors = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
 
@@ -1148,6 +1264,29 @@ def to_html(all_articles):
   </td>
 </tr>
 
+  <!-- 핵심 이슈 3개 -->
+  <tr>
+    <td style="padding:8px 32px 6px 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td style="font-size:18px;font-weight:800;color:#0f172a;white-space:nowrap;padding-right:12px;">
+            🔥 이번 주 핵심 이슈 3개
+          </td>
+          <td width="100%">
+            <div style="height:2px;background-color:#fee2e2;border-radius:2px;"></div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:4px 32px 16px 32px;">
+      {render_core_issues_html(core_issues)}
+    </td>
+  </tr>
+
+
   <!-- 주요 기사 헤더 -->
   <tr>
     <td style="padding:20px 32px 10px 32px;">
@@ -1282,7 +1421,8 @@ if __name__ == "__main__":
     total_found = sum(len(v) for v in all_articles.values())
     print(f"✅ 중복 제거 완료 (제거: {removed_count}건, 최종: {total_found}건)")
 
+    core_issues = build_core_issues(all_articles, top_n=3)
     inline_images = prepare_inline_images(all_articles)
-    html = to_html(all_articles)
+    html = to_html(all_articles, core_issues)
     send_mail(html, inline_images)
     print(f"✅ 전체 완료 (발송 기사: {total_found}건)")
