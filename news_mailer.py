@@ -976,7 +976,7 @@ def _trim(text: str, max_len: int) -> str:
         if idx > max_len * 0.6:
             cut = cut[:idx]
             break
-    return cut.rstrip(" ,，.。") + "…"
+    return cut.rstrip(" ,，.。")
 STOPWORDS = {
     "있다","했다","한다","위해","통해","대한","관련","이번","지난","이날",
     "기자","보도","뉴스","기사","정부","업계","서비스","플랫폼","시장"
@@ -1176,19 +1176,36 @@ def summarize_core_issues_with_gpt(all_articles, top_n=3):
 def normalize_issue_line(line: str) -> str:
     line = clean_spaces(str(line))
 
+    # 말줄임표 제거
     line = line.replace("...", " ").replace("…", " ")
     line = re.sub(r"\s+", " ", line).strip(" .,-")
 
     if not line:
         return ""
 
+    # 앞쪽 태그/군더더기 제거
+    line = re.sub(r"^\[[^\]]+\]\s*", "", line)
+    line = re.sub(r"^<[^>]+>\s*", "", line)
+
+    # 서술형 종결 제거
     line = re.sub(
         r"(했다|한다|됐다|되었다|이다|였다|라고 밝혔다|라고 했다|라고 전했다|밝혔다|전했다|나타났다|보인다|예정이다)$",
         "",
         line
     ).strip()
 
+    # 조사가 끝에 남은 경우 정리
     line = re.sub(r"(은|는|이|가|을|를|에|의|로|으로)$", "", line).strip()
+
+    # 너무 길면 마지막 조사/어미 이전까지만 정리
+    if len(line) > 60:
+        cut = line[:60]
+        for sep in (" 관련 ", " 및 ", " 와 ", " 과 ", " 에 ", " 의 ", " 로 ", "으로 "):
+            idx = cut.rfind(sep)
+            if idx > 25:
+                cut = cut[:idx]
+                break
+        line = cut.strip(" .,-")
 
     noun_endings = (
         "정책", "변화", "강화", "확대", "축소", "도입", "허용", "금지",
@@ -1196,7 +1213,6 @@ def normalize_issue_line(line: str) -> str:
         "개편", "시정", "발표", "후속조치", "압박", "제재", "조사", "소송", "이슈"
     )
     if not line.endswith(noun_endings):
-        line = line.rstrip(". ")
         line += " 관련 이슈"
 
     return line
@@ -1561,13 +1577,17 @@ if __name__ == "__main__":
     for v in all_articles.values():
         v.sort(key=lambda x: x.get("date", ""), reverse=True)
     total_found = sum(len(v) for v in all_articles.values())
-    print(f"✅ 중복 제거 완료 (제거: {removed_count}건, 최종: {total_found}건)")
+print(f"✅ 중복 제거 완료 (제거: {removed_count}건, 최종: {total_found}건)")
 
-    core_issues = summarize_core_issues_with_gpt(all_articles, top_n=3)
-    if not core_issues:
-        core_issues = build_core_issues(all_articles, top_n=3)
+core_issues = summarize_core_issues_with_gpt(all_articles, top_n=3)
 
-    inline_images = prepare_inline_images(all_articles)
+if not core_issues:
+    core_issues = [
+        normalize_issue_line(x["line"])
+        for x in build_core_issues(all_articles, top_n=3)
+    ]
+
+inline_images = prepare_inline_images(all_articles)
     html = to_html(all_articles, core_issues)
     send_mail(html, inline_images)
     print(f"✅ 전체 완료 (발송 기사: {total_found}건)")
