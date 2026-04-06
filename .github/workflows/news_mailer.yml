@@ -44,6 +44,6 @@ jobs:
     NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
     NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
 
-    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}   # ✅ 추가
-    OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}       # ✅ 추가
+OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
     run: python news_mailer.py --mode ${{ github.event.client_payload.mode || github.event.inputs.mode || 'auto' }}
