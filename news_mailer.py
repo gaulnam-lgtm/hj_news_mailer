@@ -1218,11 +1218,6 @@ def normalize_issue_line(line: str) -> str:
     for pattern, repl in replacements:
         line = re.sub(pattern, repl, line)
 
-    # 완전 개조식 보정
-    if not re.search(r"(정책|규제|논의|강화|변화|이슈|조치)$", line):
-        line = line.rstrip(". ")
-        line += " 이슈"
-
     return line
 
 def render_core_issues_html(core_issues):
@@ -1436,7 +1431,7 @@ def to_html(all_articles, core_issues):
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
           <td style="font-size:18px;font-weight:800;color:#0f172a;white-space:nowrap;padding-right:12px;">
-            🔥 이번 주 핵심 이슈 3개
+            🔥 이번 주 핵심 이슈
           </td>
           <td width="100%">
             <div style="height:2px;background-color:#fee2e2;border-radius:2px;"></div>
