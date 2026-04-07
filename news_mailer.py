@@ -4,7 +4,6 @@ import json
 import smtplib
 import re
 import base64
-import html as html_lib
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -20,29 +19,24 @@ from collections import defaultdict
 from xml.etree import ElementTree as ET
 from PIL import Image, ImageOps, ImageFile
 
-try:
-    from openai import OpenAI
-except Exception:
-    OpenAI = None
-
 # ── 설정 ────────────────────────────────────────────────────
 GMAIL_ID = os.environ["GMAIL_ID"]
 GMAIL_PW = os.environ["GMAIL_APP_PASSWORD"]
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
+mode = "auto"
+if "--mode" in sys.argv:
+    mode = sys.argv[sys.argv.index("--mode") + 1]
 
 KST = timezone(timedelta(hours=9))
 today_dt = datetime.now(KST)
 
-mode = "auto"
-if "--mode" in sys.argv:
-    mode = sys.argv[sys.argv.index("--mode") + 1]
 if mode == "auto":
     mode = "weekly" if today_dt.weekday() == 0 else "daily"
+
 if mode == "daily":
     MAIL_TO = os.environ["MAIL_TO_DAILY"]
 else:
     MAIL_TO = os.environ["MAIL_TO"]
+
 NAVER_CLIENT_ID = os.environ["NAVER_CLIENT_ID"]
 NAVER_CLIENT_SECRET = os.environ["NAVER_CLIENT_SECRET"]
 MIN_ARTICLE_SCORE = int(os.environ.get("MIN_ARTICLE_SCORE", "7"))
@@ -115,43 +109,31 @@ def is_blocked_domain(url: str) -> bool:
     return any(domain == d or domain.endswith("." + d) for d in BOT_BLOCKED_DOMAINS)
 
 # ── 유틸 함수 ───────────────────────────────────────────────
-
 def strip_html(text):
-    text = html_lib.unescape(text or "")
-    text = re.sub(r"<[^>]+>", " ", text)
-    return re.sub(r"\s+", " ", text).strip()
-
+    return re.sub(r"<[^>]+>", "", text or "").strip()
 
 def normalize_text(text):
     text = strip_html(text)
     text = re.sub(r"\s+", "", text)
     return text.lower()
 
-
 def clean_spaces(text):
-    text = html_lib.unescape(text or "")
-    text = text.replace("\xa0", " ")
-    text = re.sub(r"[\u200b\u200c\u200d\ufeff]", "", text)
-    text = re.sub(r"&#x27;|&#39;", "'", text)
-    text = re.sub(r"&quot;", '"', text)
-    text = re.sub(r"&nbsp;", " ", text)
-    return re.sub(r"\s+", " ", text).strip()
-
+    return re.sub(r"\s+", " ", (text or "")).strip()
 
 
 def sanitize_summary_line(text: str) -> str:
-    """핵심 요약 문장/구를 정리하고 HTML 엔티티/가비지 제거."""
-    text = clean_spaces(strip_html(text or ""))
+    """핵심 요약 문장 앞뒤의 가비지 문자/공백을 정리."""
+    text = clean_spaces(text or "")
     if not text:
         return ""
 
+    # BOM/zero-width/제어문자 제거
+    text = re.sub(r"[﻿​‌‍⁠ ]", "", text)
     text = re.sub(r"^[\s\-–—•·ㆍ※▶▷◆◇□■]+", "", text)
-    text = re.sub(r"^(사진|자료사진|출처|이미지)\s*[:：]\s*", "", text)
-    text = re.sub(r"^<[^\>]+>\s*", "", text)
-    text = re.sub(r"^[가-힣]\s+(?=[가-힣A-Za-z0-9(])", "", text)
-    text = re.sub(r"\s+", " ", text).strip(" ,.-")
-    return text
 
+    # 앞에 잘못 붙은 한 글자 가비지(예: '히 미국은') 제거
+    text = re.sub(r'^[가-힣]\s+(?=[가-힣A-Za-z0-9(])', '', text)
+    return text.strip()
 
 def get_domain(url):
     m = re.search(r"https?://(?:www\.)?([^/]+)", url or "")
@@ -315,48 +297,10 @@ def extract_candidate_snippets_from_html(html: str) -> list:
         cleaned.append(txt)
     return cleaned
 
-
-
-def extract_article_text_from_html(html: str) -> str:
-    blocks = []
-
-    patterns = [
-        r"<article[^>]*>(.*?)</article>",
-        r"<div[^>]*class=[\"']?[^\"']*(?:article|article_body|articleBody|newsct_article|story|content|view|detail|post-content|entry-content)[^\"']*[\"']?[^>]*>(.*?)</div>",
-        r"<section[^>]*class=[\"']?[^\"']*(?:article|content|story|view|detail)[^\"']*[\"']?[^>]*>(.*?)</section>",
-    ]
-
-    for pat in patterns:
-        for m in re.finditer(pat, html, re.IGNORECASE | re.DOTALL):
-            txt = clean_spaces(strip_html(" ".join(g for g in m.groups() if g)))
-            if len(txt) >= 200:
-                blocks.append(txt)
-
-    if not blocks:
-        paras = []
-        for m in re.finditer(r"<p[^>]*>(.*?)</p>", html, re.IGNORECASE | re.DOTALL):
-            txt = clean_spaces(strip_html(m.group(1)))
-            if len(txt) >= 40:
-                paras.append(txt)
-        joined = " ".join(paras)
-        if len(joined) >= 200:
-            blocks.append(joined)
-
-    if not blocks:
-        return ""
-
-    blocks.sort(key=len, reverse=True)
-    text = blocks[0]
-
-    text = re.sub(r"\[[^\]]+\]", " ", text)
-    text = re.sub(r"(무단전재|재배포 금지|저작권자.*?금지)", " ", text, flags=re.IGNORECASE)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
-
 # ── 기사 정보 추출 (기존 그대로) ─────────────────────────────
 def get_article_info(url: str, depth=0) -> tuple:
     if not url or not url.startswith("http") or depth > 3:
-        return None, None, ""
+        return None, None
     try:
         req = Request(url)
         req.add_header("User-Agent", GOOGLEBOT_UA)
@@ -376,7 +320,7 @@ def get_article_info(url: str, depth=0) -> tuple:
                 real_url = m.group(1).replace("&amp;", "&")
                 if real_url and real_url != url:
                     return get_article_info(real_url, depth=depth + 1)
-            return None, None, ""
+            return None, None
 
         def extract_meta(html_text, meta_name):
             pat1 = rf"<meta\s+[^>]*?(?:property|name)\s*=\s*[\"']{meta_name}[\"'][^>]*?content\s*=\s*[\"']([^\"']+)[\"']"
@@ -465,11 +409,10 @@ def get_article_info(url: str, depth=0) -> tuple:
             if html_candidates:
                 snippet = html_candidates[0]
 
-        article_text = extract_article_text_from_html(html)
-        return image, snippet, article_text
+        return image, snippet
 
     except Exception:
-        return None, None, ""
+        return None, None
 
 def optimize_thumbnail_bytes(data: bytes, subtype: str, display_w: int = THUMB_DISPLAY_W, display_h: int = THUMB_DISPLAY_H,
                              max_w: int = THUMB_MAX_W, max_h: int = THUMB_MAX_H, target_bytes: int = THUMB_TARGET_BYTES):
@@ -711,14 +654,14 @@ def fetch_naver_articles(keyword):
         score = score_article(keyword, title, desc)
         print(f"  [NAVER/{keyword}] ({score}) {title[:50]}...")
 
-        image, snippet, article_text = get_article_info(link)
+        image, snippet = get_article_info(link)
 
         if not desc or normalize_text(desc) == normalize_text(title):
             desc = snippet or ""
 
         articles.append({
             "title": title, "press": press, "link": link,
-            "summary": desc, "body": article_text, "date": pub_label,
+            "summary": desc, "date": pub_label,
             "score": score, "keyword": keyword, "image": image
         })
 
@@ -780,7 +723,7 @@ def fetch_google_articles(keyword):
             score = score_article(keyword, title, desc_raw)
             print(f"  [GOOGLE/{keyword}] ({score}) {title[:50]}...")
 
-            image, snippet, article_text = get_article_info(real_link or link)
+            image, snippet = get_article_info(real_link or link)
 
             desc = desc_raw
             if not desc or normalize_text(desc).startswith(normalize_text(title)):
@@ -788,7 +731,7 @@ def fetch_google_articles(keyword):
 
             articles.append({
                 "title": title, "press": press, "link": link,
-                "summary": desc, "body": article_text, "date": pub_label,
+                "summary": desc, "date": pub_label,
                 "score": score, "keyword": keyword, "image": image
             })
 
@@ -913,7 +856,7 @@ def fetch_regulatory_articles():
 
                 print(f"  [REGULATORY/{label}] {title_raw[:60]}...")
 
-                image, snippet, article_text = get_article_info(link) if link else (None, None, "")
+                image, snippet = get_article_info(link) if link else (None, None)
                 summary = snippet or desc_raw
 
                 articles.append({
@@ -921,7 +864,6 @@ def fetch_regulatory_articles():
                     "press":   label,
                     "link":    link,
                     "summary": summary,
-                    "body":    article_text,
                     "date":    pub_label,
                     "score":   15,          # 1차 발표문이므로 높은 점수 고정
                     "keyword": f"[규제기관] {label}",
@@ -939,122 +881,6 @@ def fetch_regulatory_articles():
 
     return results
 
-
-
-APPMARKET_TERMS = [
-    "앱마켓", "앱 마켓", "앱스토어", "플레이스토어", "구글플레이", "애플", "구글",
-    "인앱결제", "외부결제", "수수료", "방통위", "공정위", "공정거래위원회",
-    "디지털시장법", "dma", "반독점", "사이드로딩", "안티스티어링", "제3자결제",
-    "앱 심사", "앱 개발사", "원스토어", "갤럭시스토어", "앱 정책"
-]
-
-BAD_ISSUE_FRAGMENTS = [
-    "한국도 안 도왔다", "고속버스 추락사고", "직무정지", "병원이송", "연예", "날씨",
-    "부동산", "증시", "환율", "교통사고", "야구", "축구", "배우", "가수"
-]
-
-def has_appmarket_context(text: str) -> bool:
-    low = clean_spaces(strip_html(text)).lower()
-    return any(term.lower() in low for term in APPMARKET_TERMS)
-
-def is_bad_issue_fragment(text: str) -> bool:
-    low = clean_spaces(strip_html(text)).lower()
-    return any(bad.lower() in low for bad in BAD_ISSUE_FRAGMENTS)
-
-
-def split_sentences(text: str) -> list:
-    text = sanitize_summary_line(text)
-    if not text:
-        return []
-    parts = re.split(r'(?<=[\.\?!]|다\.)\s+|(?<=[;:])\s+', text)
-    out = []
-    for p in parts:
-        p = sanitize_summary_line(p)
-        if len(p) >= 12:
-            out.append(p)
-    return out
-
-
-def split_clauses(text: str) -> list:
-    text = sanitize_summary_line(text)
-    if not text:
-        return []
-    chunks = re.split(r"\s*[·•|/]\s*|\s*[,;:]\s*|\s+\-\s+|\s+—\s+|\s+및\s+|\s+또는\s+", text)
-    out = []
-    for c in chunks:
-        c = sanitize_summary_line(c)
-        if len(c) >= 10:
-            out.append(c)
-    return out
-
-def score_issue_candidate(keyword: str, text: str) -> int:
-    text = sanitize_summary_line(text)
-    if not text:
-        return -999
-    score = 0
-    low = text.lower()
-    kw_low = clean_spaces(keyword).lower()
-    if kw_low and kw_low in low:
-        score += 8
-    for term in POLICY_KEYWORDS:
-        if term.lower() in low:
-            score += 3
-    for term in KEYWORDS_PLATFORM:
-        if term.lower() in low:
-            score += 2
-    if has_appmarket_context(text):
-        score += 6
-    if is_bad_issue_fragment(text):
-        score -= 20
-    if 20 <= len(text) <= 60:
-        score += 5
-    elif 61 <= len(text) <= 85:
-        score += 2
-    elif len(text) < 15:
-        score -= 4
-    return score
-
-def clamp_issue_line(text: str, max_len: int = 60) -> str:
-    text = sanitize_summary_line(text)
-    if len(text) <= max_len:
-        return text
-    cut = text[:max_len]
-    split_idx = -1
-    for sep in (" 및 ", " 관련 ", " 따른 ", " 중심 ", " 확대 ", " 강화 ", " 변화 ", " 정책 ", " 제재 "):
-        idx = cut.rfind(sep)
-        if idx >= 18:
-            split_idx = idx
-            break
-    if split_idx != -1:
-        first = cut[:split_idx].strip(" ,.-")
-        second = sanitize_summary_line(text[split_idx:])[:max_len].strip(" ,.-")
-        if second:
-            return first + "\\n" + second
-        return first
-    idx = max(cut.rfind(" "), cut.rfind("·"))
-    if idx >= 18:
-        return cut[:idx].strip(" ,.-")
-    return cut.strip(" ,.-")
-
-def combine_issue_fragments(parts: list) -> str:
-    parts = [sanitize_summary_line(p) for p in parts if sanitize_summary_line(p)]
-    if not parts:
-        return ""
-    # de-duplicate while preserving order
-    seen = set()
-    uniq = []
-    for p in parts:
-        norm = normalize_text(p)
-        if norm in seen:
-            continue
-        seen.add(norm)
-        uniq.append(p)
-    if len(uniq) == 1:
-        return uniq[0]
-    base = uniq[0]
-    extra = uniq[1]
-    joined = f"{base} 및 {extra}"
-    return joined if len(joined) <= 72 else f"{base} {extra}"
 # ── 핵심 요약 ────────────────────────────────────────────────
 POLICY_KEYWORDS = [
     "수수료", "정책", "규제", "법", "인하", "허용", "금지", "의무",
@@ -1105,297 +931,59 @@ def _trim(text: str, max_len: int) -> str:
         if idx > max_len * 0.6:
             cut = cut[:idx]
             break
-    return cut.rstrip(" ,，.。")
-STOPWORDS = {
-    "있다","했다","한다","위해","통해","대한","관련","이번","지난","이날",
-    "기자","보도","뉴스","기사","정부","업계","서비스","플랫폼","시장"
-}
-
-def split_sentences(text: str) -> list:
-    text = clean_spaces(text)
-    if not text:
-        return []
-    parts = re.split(r"(?<=[.!?다요음])\s+", text)
-    return [p.strip() for p in parts if len(p.strip()) >= 25]
-
-
-def extract_issue_line(keyword: str, merged_text: str) -> str:
-    raw_sentences = split_sentences(merged_text)
-    raw_clauses = []
-    for s in raw_sentences:
-        raw_clauses.extend(split_clauses(s))
-    candidates = raw_sentences + raw_clauses
-
-    ranked = []
-    for cand in candidates:
-        cand = sanitize_summary_line(cand)
-        if not cand or is_bad_issue_fragment(cand):
-            continue
-        if not has_appmarket_context(f"{keyword} {cand}"):
-            continue
-        ranked.append((score_issue_candidate(keyword, cand), cand))
-
-    ranked.sort(key=lambda x: (-x[0], len(x[1])))
-
-    if not ranked:
-        return sanitize_summary_line(keyword)
-
-    best = ranked[0][1]
-    extras = [c for _, c in ranked[1:6] if normalize_text(c) != normalize_text(best)]
-
-    line = best
-    # if too short, enrich with second high-quality fragment
-    if len(line) < 22 and extras:
-        line = combine_issue_fragments([line, extras[0]])
-
-    return normalize_issue_line(line, keyword)
-
-
-
-def build_core_issues(all_articles, top_n=3):
-    buckets = []
+    return cut.rstrip(" ,，.。") + "…"
+def build_summary_html(all_articles):
+    items = []
+    seen_texts = set()
 
     for kw, articles in all_articles.items():
-        parts = []
-        total_score = 0
-
         for a in articles:
-            title = sanitize_summary_line(a.get("title", ""))
-            summary = sanitize_summary_line(a.get("summary", ""))
-            body = sanitize_summary_line(a.get("body", ""))[:500]
+            src = a.get("summary") or ""
+            line = extract_best_sentence(src, a.get("title", ""))
+            if not line or line in seen_texts:
+                continue
+            seen_texts.add(line)
+            priority = sum(1 for pk in POLICY_KEYWORDS if pk in line or pk in a.get("title",""))
+            items.append((priority, line))
 
-            # 제목/요약 중심으로만 사용, 본문은 보조로 제한
-            source_bits = []
-            for t in [title, summary, body]:
-                if t and has_appmarket_context(f"{kw} {t}") and not is_bad_issue_fragment(t):
-                    source_bits.append(t)
-            if source_bits:
-                parts.append(" ".join(source_bits[:2]))
-
-            total_score += a.get("score", 0)
-
-        merged_text = " ".join(parts).strip()
-        if not merged_text:
+    items.sort(key=lambda x: -x[0])
+    top3 = []
+    seen2 = set()
+    for _, line in items:
+        line = sanitize_summary_line(line)
+        if not line or line in seen2:
             continue
-
-        line = extract_issue_line(kw, merged_text)
-        if not line or is_bad_issue_fragment(line):
-            continue
-
-        buckets.append({
-            "keyword": kw,
-            "line": line,
-            "score": total_score + len(parts) * 4
-        })
-
-    buckets.sort(key=lambda x: x["score"], reverse=True)
-
-    top = []
-    seen = set()
-    for item in buckets:
-        norm = normalize_text(item["line"])
-        if not norm or norm in seen:
-            continue
-        seen.add(norm)
-        top.append(item)
-        if len(top) >= top_n:
+        seen2.add(line)
+        top3.append(line)
+        if len(top3) >= 3:
             break
 
-    return top
+    if not top3:
+        return '<div style="font-size:14px;color:#94a3b8;padding:4px 0;">이번 주 주요 내용을 찾지 못했습니다.</div>'
 
-
-
-def build_issue_source_text(all_articles, max_items_per_keyword=3, max_chars=12000):
-    parts = []
-
-    for kw, articles in all_articles.items():
-        added = 0
-        for a in articles:
-            if added >= max_items_per_keyword:
-                break
-
-            title = sanitize_summary_line(a.get("title", ""))
-            summary = sanitize_summary_line(a.get("summary", ""))
-            body = sanitize_summary_line(a.get("body", ""))[:350]
-            press = clean_spaces(a.get("press", ""))
-            date = clean_spaces(a.get("date", ""))
-
-            if not has_appmarket_context(f"{kw} {title} {summary} {body}"):
-                continue
-            if is_bad_issue_fragment(f"{title} {summary} {body}"):
-                continue
-
-            block = f"""
-[키워드] {kw}
-[제목] {title}
-[언론사] {press}
-[날짜] {date}
-[요약] {summary}
-[본문요지] {body}
-""".strip()
-            parts.append(block)
-            added += 1
-
-    merged = "\n\n".join(parts)
-    return merged[:max_chars]
-
-
-
-def summarize_core_issues_with_gpt(all_articles, top_n=3):
-    if not OPENAI_API_KEY or OpenAI is None:
-        return []
-
-    source_text = build_issue_source_text(all_articles)
-    if not source_text.strip():
-        return []
-
-    prompt = f"""
-아래는 최근 일주일간 앱마켓 관련 기사와 규제 동향 자료다.
-
-작업 지시:
-- 서로 다른 핵심 이슈 {top_n}개만 추출
-- 반드시 기사 내용을 요약해서 새로 작성
-- 이미 정해진 문구를 고르지 말고, 기사 공통 내용을 압축해 작성
-- 앱마켓/인앱결제/수수료/외부결제/규제/소송 등 핵심 정책 흐름이 드러나야 함
-- 중요하지 않거나 앱마켓과 무관한 내용은 제외
-- HTML 엔티티나 태그 문자열(&lt;, &gt;, &#x27; 등) 절대 포함 금지
-- 각 항목은 한국어 개조식, 20~60자
-- 기본 1줄, 길면 2줄까지 허용
-- 문장이 중간에서 끊기거나 말줄임표로 끝나면 안 됨
-- 출력은 JSON만 반환
-
-형식:
-{{
-  "issues": [
-    "구글·애플 수수료 인하 압력 확대 및 외부결제 허용 정책 논의 지속",
-    "인앱결제 강제 금지법 시행에 따른 앱마켓 사업자 정책 변경",
-    "공정위 등 국내외 규제기관의 앱마켓 불공정행위 제재 강화"
-  ]
-}}
-
-자료:
-{source_text}
-"""
-
-    try:
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        resp = client.responses.create(
-            model=OPENAI_MODEL,
-            input=prompt,
-        )
-        text = clean_spaces(getattr(resp, "output_text", "") or "")
-        if not text:
-            return []
-
-        m = re.search(r'\{[\s\S]*\}', text)
-        payload = json.loads(m.group(0) if m else text)
-        issues = payload.get("issues", [])
-
-        cleaned = []
-        seen = set()
-
-        for line in issues:
-            line = normalize_issue_line(line)
-            if not line:
-                continue
-            if not has_appmarket_context(line):
-                continue
-            if is_bad_issue_fragment(line):
-                continue
-            norm = normalize_text(line)
-            if norm in seen:
-                continue
-            seen.add(norm)
-            cleaned.append(line)
-            if len(cleaned) >= top_n:
-                break
-
-        return cleaned
-
-    except Exception as e:
-        print(f"[ERROR] GPT 핵심 이슈 요약 실패: {e}")
-        return []
-
-
-
-def normalize_issue_line(line: str, keyword: str = "") -> str:
-    line = sanitize_summary_line(line)
-    keyword = sanitize_summary_line(keyword)
-
-    if not line:
-        return ""
-
-    line = re.sub(r"^(사진|자료사진|자료|출처)\s*[:：]\s*", "", line)
-    line = re.sub(r"^<[^>]+>\s*", "", line)
-    line = re.sub(r"^[\-\–\—•·]+\s*", "", line)
-    line = line.replace("...", " ").replace("…", " ")
-    line = re.sub(r"\s+", " ", line).strip(" ,.-")
-
-    # 흔한 서술 종결/불완전 꼬리 제거
-    line = re.sub(r"(라고|이라며|에 따르면|등을|등의|등)\s*$", "", line)
-    line = re.sub(r"(했다|한다|됐다|되었다|이다|였다|밝혔다|전했다|나타났다|예정이다)\s*$", "", line)
-    line = re.sub(r"(은|는|이|가|을|를|에|의|로|으로)\s*$", "", line)
-
-    # 너무 짧고 키워드가 있으면 키워드 보강
-    if len(line) < 18 and keyword and keyword not in line:
-        line = f"{keyword} 관련 {line}"
-
-    # 앱마켓 맥락이 없으면 키워드 보강
-    if keyword and not has_appmarket_context(line):
-        line = f"{keyword} {line}".strip()
-
-    line = sanitize_summary_line(line)
-
-    # 20자 미만이면 두 번째 설명 꼬리 보강
-    if len(line) < 20 and not re.search(r"(정책|규제|제재|논의|변화|강화|개편|허용|금지|조사|소송)$", line):
-        line = f"{line} 정책 변화"
-
-    # 최대 60자, 2줄까지 허용
-    return clamp_issue_line(line, 60)
-
-
-
-def render_core_issues_html(core_issues):
-    if not core_issues:
-        return """
-        <div style="font-size:14px;color:#94a3b8;padding:4px 0;">
-          이번 주 핵심 이슈를 추출하지 못했습니다.
-        </div>
-        """
-
+    accent_colors = ["#475569"] * 3
     rows = ""
-    for idx, item in enumerate(core_issues, start=1):
-        if isinstance(item, dict):
-            line = sanitize_summary_line(item.get("line", ""))
-        else:
-            line = sanitize_summary_line(str(item))
-
-        line_html = html_lib.escape(line).replace("\n", "<br>")
-
+    for i, line in enumerate(top3):
+        color = accent_colors[i % len(accent_colors)]
         rows += f"""
         <tr>
           <td style="padding:0 0 10px 0;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
-                <td width="34" align="center"
-                    style="background:#111827;color:#ffffff;font-size:13px;font-weight:800;border-radius:8px 0 0 8px;">
-                  {idx}
-                </td>
-                <td style="padding:10px 14px;background-color:#ffffff;border:1px solid #e5e7eb;border-left:none;
-                           border-radius:0 8px 8px 0;font-size:14px;line-height:22px;color:#1f2937;
-                           white-space:normal;word-break:keep-all;">
-                  {line_html}
+                <td width="4" style="background-color:{color};border-radius:3px;">&nbsp;</td>
+                <td style="padding:10px 14px;background-color:#ffffff;border-radius:0 8px 8px 0;
+                            font-size:14px;line-height:22px;color:#1e293b;border:1px solid #e5e7eb;border-left:none;">
+                  {line}
                 </td>
               </tr>
             </table>
           </td>
-        </tr>
-        """
+        </tr>"""
 
-    return f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">{rows}</table>'
+    return f"""<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">{rows}</table>"""
 
-
-def to_html(all_articles, core_issues):
+# ── HTML 생성 (5가지 요청 모두 적용) ────────────────────────
+def to_html(all_articles):
     palette = ["#4f46e5", "#db2777", "#d97706", "#059669", "#2563eb", "#dc2626", "#7c3aed", "#0891b2"]
     kw_colors = {kw: palette[i % len(palette)] for i, kw in enumerate(all_articles.keys())}
 
@@ -1560,29 +1148,6 @@ def to_html(all_articles, core_issues):
   </td>
 </tr>
 
-  <!-- 핵심 이슈 3개 -->
-  <tr>
-    <td style="padding:8px 32px 6px 32px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-        <tr>
-          <td style="font-size:18px;font-weight:800;color:#0f172a;white-space:nowrap;padding-right:12px;">
-            🔥 이번 주 핵심 이슈
-          </td>
-          <td width="100%">
-            <div style="height:2px;background-color:#fee2e2;border-radius:2px;"></div>
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-
-  <tr>
-    <td style="padding:4px 32px 16px 32px;">
-      {render_core_issues_html(core_issues)}
-    </td>
-  </tr>
-
-
   <!-- 주요 기사 헤더 -->
   <tr>
     <td style="padding:20px 32px 10px 32px;">
@@ -1717,15 +1282,7 @@ if __name__ == "__main__":
     total_found = sum(len(v) for v in all_articles.values())
     print(f"✅ 중복 제거 완료 (제거: {removed_count}건, 최종: {total_found}건)")
 
-    core_issues = summarize_core_issues_with_gpt(all_articles, top_n=3)
-
-    if not core_issues:
-        core_issues = [
-            normalize_issue_line(x["line"], x.get("keyword", ""))
-            for x in build_core_issues(all_articles, top_n=3)
-        ]
-
     inline_images = prepare_inline_images(all_articles)
-    html = to_html(all_articles, core_issues)
+    html = to_html(all_articles)
     send_mail(html, inline_images)
     print(f"✅ 전체 완료 (발송 기사: {total_found}건)")
