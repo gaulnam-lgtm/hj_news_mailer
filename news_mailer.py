@@ -1100,7 +1100,7 @@ def to_html(all_articles):
             </div>
             <div style="margin-bottom:11px;">
               <img src="{IMAGE1_BASE64}"
-                   height="56"
+                   height="60"
                    style="height:62px;width:auto;display:block;" alt="주간 앱 마켓 뉴스레터">
             </div>
             <div style="font-size:14px;color:rgba(180,215,255,0.75);font-family:Arial,sans-serif;">
