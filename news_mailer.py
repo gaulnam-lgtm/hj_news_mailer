@@ -1107,7 +1107,7 @@ def to_html(all_articles):
               &#9679; 검색 범위 : {week_ago} ~ {today}
             </div>
           </td>
-          <td style="padding:14px 0px 14px 28px;vertical-align:middle;
+          <td style="padding:14px 0px 14px 38px;vertical-align:middle;
                      text-align:center;width:340px;">
             <img src="{IMAGE2_BASE64}"
                  style="max-width:250px;height:140px;display:block;border-radius:20px;"
