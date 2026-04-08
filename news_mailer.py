@@ -1092,7 +1092,7 @@ def to_html(all_articles):
         padding:0;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
-          <td style="padding:22px 0 13px 62px;vertical-align:middle;">
+          <td style="padding:22px 0 13px 52px;vertical-align:middle;">
             <div style="font-size:13px;font-weight:800;letter-spacing:3px;
                         color:rgba(147,197,253,0.85);margin-bottom:11px;
                         font-family:Arial,sans-serif;">
