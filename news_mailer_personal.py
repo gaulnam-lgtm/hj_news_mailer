@@ -597,18 +597,31 @@ def to_html(all_articles):
     radial-gradient(ellipse at 52% 95%, rgba(196, 181, 253, 0.22) 0%, transparent 48%),
     linear-gradient(135deg, #f8fbff 0%, #ecfeff 50%, #fdf2ff 100%);
     padding: 36px 40px;">
-    <div style="font-size:13px;font-weight:800;letter-spacing:3px;
-                color:#5b6b93;margin-bottom:11px;font-family:Arial,sans-serif;">
-      &#128203;&nbsp;&nbsp;DAILY PERSONAL NEWS
-    </div>
-    <div style="margin-bottom:11px;">
-      <img src="https://raw.githubusercontent.com/gaulnam-lgtm/hj_news_mailer/main/personal1.png"
-           alt="일간 개인 뉴스레터"
-           style="max-height:60px;width:auto;display:block;">
-    </div>
-    <div style="font-size:13px;line-height:1.35;color:#333333;font-family:Arial,sans-serif;">
-      &#9679; {since_str} ~ {today} &nbsp;·&nbsp; 기사 {article_count}건 &nbsp;·&nbsp; 키워드 {len(all_articles)}개
-    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <!-- 왼쪽: 텍스트 영역 -->
+        <td style="vertical-align:middle;">
+          <div style="font-size:13px;font-weight:800;letter-spacing:3px;
+                      color:#5b6b93;margin-bottom:11px;font-family:Arial,sans-serif;">
+            &#128203;&nbsp;&nbsp;DAILY PERSONAL NEWS
+          </div>
+          <div style="margin-bottom:11px;">
+            <img src="https://raw.githubusercontent.com/gaulnam-lgtm/hj_news_mailer/main/personal1.png"
+                 alt="일간 개인 뉴스레터"
+                 style="max-height:60px;width:auto;display:block;">
+          </div>
+          <div style="font-size:13px;line-height:1.35;color:#333333;font-family:Arial,sans-serif;">
+            &#9679; {since_str} ~ {today} &nbsp;·&nbsp; 기사 {article_count}건 &nbsp;·&nbsp; 키워드 {len(all_articles)}개
+          </div>
+        </td>
+        <!-- 오른쪽: 이미지 영역 -->
+        <td style="vertical-align:middle;text-align:right;width:180px;">
+          <img src="https://raw.githubusercontent.com/gaulnam-lgtm/hj_news_mailer/main/personal2.png"
+               alt=""
+               style="max-height:100px;width:auto;display:block;margin-left:auto;">
+        </td>
+      </tr>
+    </table>
   </td>
 </tr>
 
