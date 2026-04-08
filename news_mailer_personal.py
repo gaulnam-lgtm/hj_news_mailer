@@ -618,7 +618,7 @@ def to_html(all_articles):
         <td style="vertical-align:bottom;text-align:right;width:250px;padding:0;overflow:hidden;">
           <img src="https://raw.githubusercontent.com/gaulnam-lgtm/hj_news_mailer/main/personal2.png"
                alt=""
-               style="width:250px;height:auto;display:block;margin-left:auto;vertical-align:bottom;">
+               style="width:250px;max-height:130px;object-fit:contain;object-position:bottom;display:block;margin-left:auto;vertical-align:bottom;">
         </td>
       </tr>
     </table>
