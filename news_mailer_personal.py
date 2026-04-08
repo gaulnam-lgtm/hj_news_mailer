@@ -604,7 +604,7 @@ def to_html(all_articles):
     <div style="margin-bottom:11px;">
       <img src="https://raw.githubusercontent.com/gaulnam-lgtm/hj_news_mailer/main/personal1.png"
            alt="일간 개인 뉴스레터"
-           style="max-height:48px;width:auto;display:block;">
+           style="max-height:60px;width:auto;display:block;">
     </div>
     <div style="font-size:13px;line-height:1.35;color:#333333;font-family:Arial,sans-serif;">
       &#9679; {since_str} ~ {today} &nbsp;·&nbsp; 기사 {article_count}건 &nbsp;·&nbsp; 키워드 {len(all_articles)}개
