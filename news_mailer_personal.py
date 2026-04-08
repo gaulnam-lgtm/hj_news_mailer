@@ -615,10 +615,10 @@ def to_html(all_articles):
           </div>
         </td>
         <!-- 오른쪽: 이미지 영역 -->
-        <td style="vertical-align:middle;text-align:right;width:180px;">
+        <td style="vertical-align:middle;text-align:right;width:250px;">
           <img src="https://raw.githubusercontent.com/gaulnam-lgtm/hj_news_mailer/main/personal2.png"
                alt=""
-               style="max-height:100px;width:auto;display:block;margin-left:auto;">
+               style="max-height:150px;width:auto;display:block;margin-left:auto;">
         </td>
       </tr>
     </table>
