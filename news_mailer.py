@@ -1085,11 +1085,11 @@ def to_html(all_articles):
 <!-- ══ 헤더 + 통계 바 통합 ══ -->
   <tr>
     <td style="background:
-        radial-gradient(ellipse at 18% 55%, rgba(99,102,241,0.55) 0%, transparent 52%),
-        radial-gradient(ellipse at 82% 18%, rgba(0,212,255,0.28) 0%, transparent 46%),
-        radial-gradient(ellipse at 52% 95%, rgba(168,85,247,0.38) 0%, transparent 48%),
-        linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #1a1a4e 100%);
-        padding:0;">
+    radial-gradient(ellipse at 18% 55%, rgba(99, 102, 241, 0.22) 0%, transparent 52%),
+    radial-gradient(ellipse at 82% 18%, rgba(0, 212, 255, 0.18) 0%, transparent 46%),
+    radial-gradient(ellipse at 52% 95%, rgba(168, 85, 247, 0.18) 0%, transparent 48%),
+    linear-gradient(135deg, #eef4ff 0%, #dbeafe 45%, #e9d5ff 100%);
+  padding: 0;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
           <td style="padding:22px 0 13px 52px;vertical-align:middle;">
