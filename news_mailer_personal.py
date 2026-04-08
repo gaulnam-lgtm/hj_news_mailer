@@ -629,7 +629,7 @@ def to_html(all_articles):
     radial-gradient(ellipse at 52% 95%, rgba(196, 181, 253, 0.22) 0%, transparent 48%),
     linear-gradient(135deg, #f8fbff 0%, #ecfeff 50%, #fdf2ff 100%);
                padding:18px 32px;text-align:center;border-radius:0 0 20px 20px;">
-      <div style="font-size:11px;color:rgba(186,230,253,0.75);font-family:Arial,sans-serif;">
+      <div style="font-size:11px;color:#6f7fa6;font-family:Arial,sans-serif;">
         개인 뉴스레터 &middot; 자동 발송 &middot; {today}
       </div>
     </td>
