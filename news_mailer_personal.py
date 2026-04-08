@@ -596,7 +596,7 @@ def to_html(all_articles):
     radial-gradient(ellipse at 82% 18%, rgba(45, 212, 191, 0.22) 0%, transparent 45%),
     radial-gradient(ellipse at 52% 95%, rgba(196, 181, 253, 0.22) 0%, transparent 48%),
     linear-gradient(135deg, #f8fbff 0%, #ecfeff 50%, #fdf2ff 100%);
-    padding: 36px 40px;">
+    padding: 31px 40px;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
         <!-- 왼쪽: 텍스트 영역 -->
