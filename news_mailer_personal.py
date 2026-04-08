@@ -601,7 +601,7 @@ def to_html(all_articles):
                   color:#5b6b93;margin-bottom:10px;font-family:Arial,sans-serif;">
         &#128203;&nbsp;&nbsp;DAILY PERSONAL NEWS
       </div>
-      <div style="font-size:28px;font-weight:900;color:#6f7fa6;margin-bottom:10px;
+      <div style="font-size:32px;font-weight:1200;color:#6f7fa6;margin-bottom:10px;
                   font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
         일간 개인 뉴스레터
       </div>
