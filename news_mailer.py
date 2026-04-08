@@ -1086,9 +1086,9 @@ def to_html(all_articles):
   <tr>
     <td style="background:
         radial-gradient(ellipse at 25% 60%, rgba(110,120,247,0.52) 0%, transparent 52%),
-        radial-gradient(ellipse at 82% 18%, rgba(0,212,255,0.23) 0%, transparent 46%),
+        radial-gradient(ellipse at 82% 18%, rgba(0,222,255,0.22) 0%, transparent 46%),
         radial-gradient(ellipse at 52% 95%, rgba(168,85,247,0.28) 0%, transparent 48%),
-        linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #1a1a4e 100%);
+        linear-gradient(135deg, #1b1640 0%, #4338ca 55%, #2a2a72 100%);
         padding:0;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
@@ -1172,10 +1172,10 @@ def to_html(all_articles):
 <!-- ══ 푸터 ══ -->
   <tr>
     <td style="background:
-        radial-gradient(ellipse at 15% 50%, rgba(99,102,241,0.35) 0%, transparent 52%),
-        radial-gradient(ellipse at 85% 20%, rgba(0,212,255,0.20) 0%, transparent 46%),
-        radial-gradient(ellipse at 50% 100%, rgba(168,85,247,0.30) 0%, transparent 48%),
-        linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #1a1a4e 100%);
+        radial-gradient(ellipse at 25% 60%, rgba(110,120,247,0.35) 0%, transparent 52%),
+        radial-gradient(ellipse at 82% 18%, rgba(0,222,255,0.20) 0%, transparent 46%),
+        radial-gradient(ellipse at 52% 95%, rgba(168,85,247,0.25) 0%, transparent 48%),
+        linear-gradient(135deg, #1b1640 0%, #4338ca 55%, #2a2a72 100%));
         padding:18px 32px;text-align:center;border-radius:0 0 20px 20px;">
       <div style="font-size:15px;font-weight:900;margin-bottom:6px;font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
         &#128241;
