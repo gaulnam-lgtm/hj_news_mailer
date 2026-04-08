@@ -623,7 +623,11 @@ def to_html(all_articles):
 
   <!-- 푸터 -->
   <tr>
-    <td style="background:linear-gradient(135deg,rgb(26,50,99) 0%,rgb(84,119,146) 33%,rgb(239,210,176) 66%,rgb(255,197,112) 100%);
+    <td style="background:
+    radial-gradient(ellipse at 18% 55%, rgba(96, 165, 250, 0.25) 0%, transparent 50%),
+    radial-gradient(ellipse at 82% 18%, rgba(45, 212, 191, 0.22) 0%, transparent 45%),
+    radial-gradient(ellipse at 52% 95%, rgba(196, 181, 253, 0.22) 0%, transparent 48%),
+    linear-gradient(135deg, #f8fbff 0%, #ecfeff 50%, #fdf2ff 100%);
                padding:18px 32px;text-align:center;border-radius:0 0 20px 20px;">
       <div style="font-size:11px;color:rgba(186,230,253,0.75);font-family:Arial,sans-serif;">
         개인 뉴스레터 &middot; 자동 발송 &middot; {today}
