@@ -1086,7 +1086,7 @@ def to_html(all_articles):
   <tr>
     <td style="background:
         radial-gradient(ellipse at 25% 60%, rgba(99,102,241,0.52) 0%, transparent 52%),
-        radial-gradient(ellipse at 82% 18%, rgba(50,225,200,0.25) 0%, transparent 46%),
+        radial-gradient(ellipse at 82% 18%, rgba(50,225,200,0.30) 0%, transparent 46%),
         radial-gradient(ellipse at 52% 95%, rgba(168,85,247,0.30) 0%, transparent 48%),
         linear-gradient(135deg, #0f0c29 0%, #302b63 55%, #1a1a4e 100%);
         padding:0;">
