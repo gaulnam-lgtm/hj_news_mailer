@@ -1083,62 +1083,61 @@ def to_html(all_articles):
        style="max-width:810px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.10);">
 
 <!-- ══ 헤더 + 통계 바 통합 ══ -->
-  <tr>
-    <td style="background:
-    radial-gradient(ellipse at 18% 55%, rgba(99, 102, 241, 0.32) 0%, transparent 52%),
-    radial-gradient(ellipse at 82% 18%, rgba(0, 212, 255, 0.22) 0%, transparent 46%),
-    radial-gradient(ellipse at 52% 95%, rgba(168, 85, 247, 0.26) 0%, transparent 48%),
-    linear-gradient(135deg, #edf3ff 0%, #dde9ff 48%, #e9d7ff 100%);
-  padding: 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-        <tr>
-          <td style="padding:22px 0 13px 52px;vertical-align:middle;">
-            <div style="font-size:13px;font-weight:800;letter-spacing:3px;
-                        color:rgba(147,197,253,0.85);margin-bottom:11px;
-                        font-family:Arial,sans-serif;">
-              &#128225;&nbsp;&nbsp;WEEKLY APP MARKET NEWS
-            </div>
-            <div style="margin-bottom:11px;">
-              <img src="{IMAGE1_BASE64}"
-                   height="56"
-                   style="height:62px;width:auto;display:block;" alt="주간 앱 마켓 뉴스레터">
-            </div>
-            <div style="font-size:14px;color:rgba(180,215,255,0.75);font-family:Arial,sans-serif;">
-              &#9679; 검색 범위 : {week_ago} ~ {today}
-            </div>
-          </td>
-          <td style="padding:14px 0px 14px 38px;vertical-align:middle;
-                     text-align:center;width:340px;">
-            <img src="{IMAGE2_BASE64}"
-                 style="max-width:250px;height:140px;display:block;border-radius:20px;"
-                 alt="App Market Visual">
-          </td>
-        </tr>
-        <tr>
-          <td colspan="2" style="padding:0 0 5px 0;
-                        border-top:1px solid rgba(255,255,255,0.08);">
-<table role="presentation" cellpadding="0" cellspacing="0"
-       border="0" width="100%">
-  <tr>
-    <td width="33%" style="text-align:center;padding:4px 0;border-right:1px solid rgba(255,255,255,0.1);">
-      <div style="font-size:14px;font-weight:700;color:#ffffff;">{week_label}</div>
-      <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">월주차</div>
-    </td>
-    <td width="33%" style="text-align:center;padding:4px 0;border-right:1px solid rgba(255,255,255,0.1);">
-      <div style="font-size:15px;font-weight:700;color:#ffffff;">{article_count}</div>
-      <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">기사 개수</div>
-    </td>
-    <td width="33%" style="text-align:center;padding:4px 0;">
-      <div style="font-size:15px;font-weight:700;color:#ffffff;">{issue_count}</div>
-      <div style="font-size:10px;color:rgba(180,200,240,0.6);margin-top:1px;">검색 키워드</div>
-    </td>
-  </tr>
-</table>
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
+<tr>
+  <td style="background:
+    radial-gradient(ellipse at 18% 55%, rgba(99, 102, 241, 0.26) 0%, transparent 52%),
+    radial-gradient(ellipse at 82% 18%, rgba(0, 212, 255, 0.18) 0%, transparent 46%),
+    radial-gradient(ellipse at 52% 95%, rgba(168, 85, 247, 0.22) 0%, transparent 48%),
+    linear-gradient(135deg, #edf3ff 0%, #dfeaff 48%, #eadcff 100%);
+    padding:0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td style="padding:22px 0 13px 52px;vertical-align:middle;">
+          <div style="font-size:13px;font-weight:800;letter-spacing:3px;
+                      color:#5b6b93;margin-bottom:11px;
+                      font-family:Arial,sans-serif;">
+            &#128225;&nbsp;&nbsp;WEEKLY APP MARKET NEWS
+          </div>
+          <div style="margin-bottom:11px;">
+            <img src="{IMAGE1_BASE64}"
+                 height="56"
+                 style="height:62px;width:auto;display:block;" alt="주간 앱 마켓 뉴스레터">
+          </div>
+          <div style="font-size:14px;color:#6f7fa6;font-family:Arial,sans-serif;">
+            &#9679; 검색 범위 : {week_ago} ~ {today}
+          </div>
+        </td>
+        <td style="padding:14px 0px 14px 38px;vertical-align:middle;
+                   text-align:center;width:340px;">
+          <img src="{IMAGE2_BASE64}"
+               style="max-width:250px;height:140px;display:block;border-radius:20px;"
+               alt="App Market Visual">
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:0 0 5px 0;
+                      border-top:1px solid rgba(91,107,147,0.22);">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td width="33%" style="text-align:center;padding:4px 0;border-right:1px solid rgba(91,107,147,0.18);">
+                <div style="font-size:14px;font-weight:700;color:#32415f;">{week_label}</div>
+                <div style="font-size:10px;color:#6f7fa6;margin-top:1px;">월주차</div>
+              </td>
+              <td width="33%" style="text-align:center;padding:4px 0;border-right:1px solid rgba(91,107,147,0.18);">
+                <div style="font-size:15px;font-weight:700;color:#32415f;">{article_count}</div>
+                <div style="font-size:10px;color:#6f7fa6;margin-top:1px;">기사 개수</div>
+              </td>
+              <td width="33%" style="text-align:center;padding:4px 0;">
+                <div style="font-size:15px;font-weight:700;color:#32415f;">{issue_count}</div>
+                <div style="font-size:10px;color:#6f7fa6;margin-top:1px;">검색 키워드</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
 
   <!-- 인사말 -->
 <tr>
