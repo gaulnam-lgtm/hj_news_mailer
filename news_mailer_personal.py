@@ -598,14 +598,14 @@ def to_html(all_articles):
     linear-gradient(135deg, #f8fbff 0%, #ecfeff 50%, #fdf2ff 100%);
     padding: 36px 40px;">
     <div style="font-size:13px;font-weight:800;letter-spacing:3px;
-                color:#5b6b93;margin-bottom:8px;font-family:Arial,sans-serif;">
+                color:#5b6b93;margin-bottom:11px;font-family:Arial,sans-serif;">
       &#128203;&nbsp;&nbsp;DAILY PERSONAL NEWS
     </div>
-    <div style="font-size:32px;font-weight:900;line-height:1.05;color:#4f5f86;margin-bottom:8px;
+    <div style="font-size:32px;font-weight:900;line-height:1.18;color:#4f5f86;margin-bottom:11px;
                 font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;">
       일간 개인 뉴스레터
     </div>
-    <div style="font-size:13px;color:#333333;font-family:Arial,sans-serif;">
+    <div style="font-size:13px;line-height:1.35;color:#333333;font-family:Arial,sans-serif;">
       &#9679; {since_str} ~ {today} &nbsp;·&nbsp; 기사 {article_count}건 &nbsp;·&nbsp; 키워드 {len(all_articles)}개
     </div>
   </td>
