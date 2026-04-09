@@ -51,7 +51,7 @@ print(f"📋 키워드 {len(KEYWORDS)}개 로드: {KEYWORDS}")
 KST        = timezone(timedelta(hours=9))
 today_dt   = datetime.now(KST)
 today      = today_dt.strftime("%Y년 %m월 %d일")
-since_dt   = today_dt - timedelta(days=1)
+since_dt   = today_dt - timedelta(days=3)
 since_str  = since_dt.strftime("%Y년 %m월 %d일")
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
