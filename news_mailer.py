@@ -774,12 +774,19 @@ REGULATORY_SOURCES = [
     },
 ]
 
-# 규제기관 기사 관련성 판단용 키워드
-REGULATORY_FILTER_KEYWORDS = [
-    "app store", "app market", "google play", "apple", "in-app purchase",
-    "in-app payment", "digital markets act", "dma", "sideloading",
-    "anti-steering", "commission", "antitrust", "app developer",
-    "앱스토어", "앱마켓", "인앱결제", "디지털시장법", "수수료", "규제",
+# 규제기관 기사 관련성 판단용 키워드 (앱마켓 특화)
+# ── 강한 키워드: 하나만 매칭돼도 앱마켓 관련 확정
+REGULATORY_STRONG_KEYWORDS = [
+    "app store", "app market", "google play", "play store",
+    "in-app purchase", "in-app payment", "sideloading", "side-loading",
+    "anti-steering", "digital markets act", "gatekeepers",
+    "앱스토어", "앱마켓", "인앱결제", "디지털시장법",
+]
+# ── 약한 키워드: 2개 이상 매칭 시에만 관련 기사로 판단 (일반적 단어이므로 단독 불충분)
+REGULATORY_WEAK_KEYWORDS = [
+    "apple", "google", "antitrust", "monopoly", "competition",
+    "app developer", "mobile", "platform", "commission fee", "marketplace",
+    "수수료", "규제", "반독점", "플랫폼",
 ]
 
 def fetch_regulatory_articles():
@@ -849,9 +856,12 @@ def fetch_regulatory_articles():
                 )
                 desc_raw = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
 
-                # 관련성 필터: 제목+설명에 앱마켓 관련 키워드가 하나라도 있어야 수집
+                # 관련성 필터: 앱마켓 관련 키워드가 충분히 매칭되어야 수집
+                # 강한 키워드 1개 이상 OR 약한 키워드 2개 이상
                 combined = (title_raw + " " + desc_raw).lower()
-                if not any(kw.lower() in combined for kw in REGULATORY_FILTER_KEYWORDS):
+                strong_hits = sum(1 for kw in REGULATORY_STRONG_KEYWORDS if kw.lower() in combined)
+                weak_hits = sum(1 for kw in REGULATORY_WEAK_KEYWORDS if kw.lower() in combined)
+                if strong_hits == 0 and weak_hits < 2:
                     continue
 
                 print(f"  [REGULATORY/{label}] {title_raw[:60]}...")
