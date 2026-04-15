@@ -782,11 +782,19 @@ REGULATORY_STRONG_KEYWORDS = [
     "anti-steering", "digital markets act", "gatekeepers",
     "앱스토어", "앱마켓", "인앱결제", "디지털시장법",
 ]
-# ── 약한 키워드: 2개 이상 매칭 시에만 관련 기사로 판단 (일반적 단어이므로 단독 불충분)
+# ── 약한 키워드: 반드시 1개 이상 + 보조 키워드 1개 이상 동시 매칭 필요
+# (platform, competition 같은 범용어는 제외 — 음식배달 등 오탐 방지)
 REGULATORY_WEAK_KEYWORDS = [
-    "apple", "google", "antitrust", "monopoly", "competition",
-    "app developer", "mobile", "platform", "commission fee", "marketplace",
-    "수수료", "규제", "반독점", "플랫폼",
+    "apple", "google", "antitrust", "monopoly",
+    "app developer", "mobile app", "commission fee",
+    "수수료", "규제", "반독점",
+]
+# ── 보조 키워드: 약한 키워드와 함께 등장해야 앱마켓 맥락으로 인정
+REGULATORY_CONTEXT_KEYWORDS = [
+    "developer", "download", "store", "ios", "android", "smartphone",
+    "tablet", "billing", "payment", "subscription", "third-party",
+    "epic", "spotify", "fortnite", "dma", "gatekeeper",
+    "개발자", "결제", "다운로드", "스마트폰", "구독",
 ]
 
 def fetch_regulatory_articles():
@@ -857,12 +865,17 @@ def fetch_regulatory_articles():
                 desc_raw = clean_spaces(strip_html(desc_el.text if desc_el is not None else ""))
 
                 # 관련성 필터: 앱마켓 관련 키워드가 충분히 매칭되어야 수집
-                # 강한 키워드 1개 이상 OR 약한 키워드 2개 이상
+                # ① 강한 키워드 1개 이상 → 즉시 통과
+                # ② 약한 키워드 1개 이상 + 보조 키워드 1개 이상 → 통과
+                # ③ 그 외 → 제외 (앱마켓과 무관한 일반 발표)
                 combined = (title_raw + " " + desc_raw).lower()
                 strong_hits = sum(1 for kw in REGULATORY_STRONG_KEYWORDS if kw.lower() in combined)
-                weak_hits = sum(1 for kw in REGULATORY_WEAK_KEYWORDS if kw.lower() in combined)
-                if strong_hits == 0 and weak_hits < 2:
-                    continue
+                if strong_hits == 0:
+                    weak_hits = sum(1 for kw in REGULATORY_WEAK_KEYWORDS if kw.lower() in combined)
+                    context_hits = sum(1 for kw in REGULATORY_CONTEXT_KEYWORDS if kw.lower() in combined)
+                    if weak_hits == 0 or context_hits == 0:
+                        print(f"    [SKIP/{label}] 앱마켓 무관 (strong={strong_hits}, weak={weak_hits}, ctx={context_hits}): {title_raw[:60]}")
+                        continue
 
                 print(f"  [REGULATORY/{label}] {title_raw[:60]}...")
 
