@@ -297,118 +297,202 @@ def extract_candidate_snippets_from_html(html: str) -> list:
         cleaned.append(txt)
     return cleaned
 
-# ── 기사 정보 추출 (기존 그대로) ─────────────────────────────
+# ── 기사 정보 추출 (이미지 추출 강화) ────────────────────────
+def _fetch_html(url: str, ua: str, timeout: int = 10):
+    """주어진 UA로 HTML을 가져온다. (url, html) 반환."""
+    req = Request(url)
+    req.add_header("User-Agent", ua)
+    req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+    req.add_header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
+    with urlopen(req, timeout=timeout) as resp:
+        return resp.url, resp.read().decode("utf-8", errors="ignore")
+
+
+def _extract_meta(html_text: str, meta_name: str):
+    pat1 = rf"<meta\s+[^>]*?(?:property|name)\s*=\s*[\"']{meta_name}[\"'][^>]*?content\s*=\s*[\"']([^\"']+)[\"']"
+    m = re.search(pat1, html_text, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+    pat2 = rf"<meta\s+[^>]*?content\s*=\s*[\"']([^\"']+)[\"'][^>]*?(?:property|name)\s*=\s*[\"']{meta_name}[\"']"
+    m = re.search(pat2, html_text, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+    return None
+
+
+# URL이 이미지일 가능성이 높은지 (키워드 기반 — 메타/JSON-LD 외의 img 태그용)
+_IMG_BLOCK_TOKENS = {"sprite", "icon", "logo", "favicon", "blank.", "placeholder",
+                     "spacer", "pixel", "1x1", "transparent", "tracking", "beacon"}
+_IMG_POSITIVE_TOKENS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif",
+                        "image", "thumb", "photo", "upload", "cdn", "media",
+                        "img", "picture", "imgsrc", "imgurl", "newsimg", "dimg"}
+
+def _looks_like_image_url(candidate: str) -> bool:
+    """기존 필터: img 태그 중 클래스 매칭된 것들에 적용."""
+    if not candidate:
+        return False
+    low = candidate.lower()
+    if low.startswith("data:image/"):
+        return True
+    if any(tok in low for tok in _IMG_BLOCK_TOKENS):
+        return False
+    return any(x in low for x in _IMG_POSITIVE_TOKENS)
+
+
+def _is_not_blocked_image(candidate: str) -> bool:
+    """완화된 필터: 차단 토큰만 아니면 허용 (일반 img 태그 폴백용)."""
+    if not candidate:
+        return False
+    low = candidate.lower()
+    if low.startswith("data:image/"):
+        return True
+    if any(tok in low for tok in _IMG_BLOCK_TOKENS):
+        return False
+    # 확장자가 없어도 CDN URL 등은 허용 — 차단 토큰만 없으면 통과
+    return True
+
+
+def _is_tiny_image(tag_html: str) -> bool:
+    """img 태그에서 width/height가 명시된 경우, 너무 작으면(< 50px) 추적 픽셀로 판단."""
+    for attr in ("width", "height"):
+        m = re.search(rf'{attr}\s*=\s*["\']?(\d+)', tag_html, re.I)
+        if m and int(m.group(1)) < 50:
+            return True
+    return False
+
+
+def _extract_images_from_html(html: str, current_url: str) -> list:
+    """HTML에서 이미지 URL 후보를 우선순위 순으로 추출."""
+    candidates = []
+
+    # 1) 메타 태그 4종
+    for tag in ("og:image", "og:image:url", "twitter:image", "twitter:image:src"):
+        raw = _extract_meta(html, tag)
+        if raw:
+            candidates.append(raw)
+
+    # 2) itemprop="image" (meta/link 태그)
+    for pat in [
+        r'<meta\s+[^>]*?itemprop\s*=\s*["\']image["\'][^>]*?content\s*=\s*["\']([^"\']+)["\']',
+        r'<link\s+[^>]*?itemprop\s*=\s*["\']image["\'][^>]*?href\s*=\s*["\']([^"\']+)["\']',
+    ]:
+        m = re.search(pat, html, re.I)
+        if m:
+            candidates.append(m.group(1).strip())
+
+    # 3) JSON-LD
+    for m in re.finditer(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+                         html, re.I | re.DOTALL):
+        block = m.group(1)
+        for pat in [r'"image"\s*:\s*"([^"]+)"', r'"thumbnailUrl"\s*:\s*"([^"]+)"']:
+            mm = re.search(pat, block, re.I | re.DOTALL)
+            if mm:
+                candidates.append(mm.group(1))
+        for arr in re.finditer(r'"image"\s*:\s*\[(.*?)\]', block, re.I | re.DOTALL):
+            for u in re.findall(r'"(https?:\\/\\/[^"\\]+|\\/[^"\\]+)"', arr.group(1)):
+                candidates.append(u)
+
+    # 4) <picture><source> 태그
+    for m in re.finditer(r'<picture[^>]*>(.*?)</picture>', html, re.I | re.DOTALL):
+        for src in re.finditer(r'<source[^>]+srcset\s*=\s*["\']([^"\']+)["\']', m.group(1), re.I):
+            raw = src.group(1).split(",")[0].strip().split()[0]
+            if _is_not_blocked_image(raw):
+                candidates.append(raw)
+
+    # 5) img 태그 — 클래스/id 매칭 (우선)
+    img_class_patterns = [
+        r'<img([^>]+(?:data-src|data-original|data-lazy-src|data-srcset|srcset|src)=["\']([^"\']+)["\'][^>]*(?:class|id|itemprop)=["\'][^"\']*(?:thumb|thumbnail|image|photo|figure|article|news|hero|lead|main|content|body|featured|representative|end_photo_org)[^"\']*["\'][^>]*)>',
+        r'<img([^>]*(?:class|id|itemprop)=["\'][^"\']*(?:thumb|thumbnail|image|photo|figure|article|news|hero|lead|main|content|body|featured|representative|end_photo_org)[^"\']*["\'][^>]+(?:data-src|data-original|data-lazy-src|data-srcset|srcset|src)=["\']([^"\']+)["\'][^>]*)>',
+    ]
+    for pat in img_class_patterns:
+        for mm in re.finditer(pat, html, re.I | re.DOTALL):
+            tag_html, cand = mm.group(1), mm.group(2)
+            if _looks_like_image_url(cand) and not _is_tiny_image(tag_html):
+                candidates.append(cand)
+
+    # 6) img 태그 — 일반 (완화 필터: 차단 토큰만 없으면 허용, 크기 체크)
+    for mm in re.finditer(
+        r'<img([^>]+(?:data-src|data-original|data-lazy-src|src)\s*=\s*["\']([^"\']+)["\'][^>]*)>',
+        html, re.I | re.DOTALL
+    ):
+        tag_html, cand = mm.group(1), mm.group(2)
+        if _is_not_blocked_image(cand) and not _is_tiny_image(tag_html):
+            candidates.append(cand)
+
+    # 7) <noscript> 안의 img (lazy-load 대체)
+    for m in re.finditer(r'<noscript>(.*?)</noscript>', html, re.I | re.DOTALL):
+        for mm in re.finditer(r'<img[^>]+src\s*=\s*["\']([^"\']+)["\']', m.group(1), re.I):
+            cand = mm.group(1)
+            if _is_not_blocked_image(cand):
+                candidates.append(cand)
+
+    # 후보 → 최종 필터 & 중복 제거
+    results = []
+    seen = set()
+    for raw in candidates:
+        raw = (raw or '').replace('\\/', '/').strip()
+        if ',' in raw and ' ' in raw:
+            raw = raw.split(',')[0].strip().split()[0]
+        final_img = make_absolute_url(current_url, raw)
+        if not final_img or final_img in seen:
+            continue
+        seen.add(final_img)
+        low = final_img.lower()
+        if "lh3.googleusercontent.com" in low or "news.google.com" in low:
+            continue
+        if any(tok in low for tok in ["sprite", "icon", "logo", "favicon", "/ads/",
+                                       "spacer", "1x1", "pixel", "blank.", "transparent"]):
+            continue
+        results.append(final_img)
+    return results
+
+
+def _extract_snippet(html: str) -> str | None:
+    """HTML에서 기사 요약문을 추출."""
+    for tag in ("og:description", "twitter:description", "description"):
+        raw = _extract_meta(html, tag)
+        cand = clean_spaces(raw) if raw else None
+        if cand and is_valid_snippet(cand):
+            return cand
+    html_candidates = extract_candidate_snippets_from_html(html)
+    return html_candidates[0] if html_candidates else None
+
+
 def get_article_info(url: str, depth=0) -> tuple:
     if not url or not url.startswith("http") or depth > 3:
         return None, None
     try:
-        req = Request(url)
-        req.add_header("User-Agent", GOOGLEBOT_UA)
-        req.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+        # ① Googlebot UA 우선 시도
+        current_url, html = _fetch_html(url, GOOGLEBOT_UA)
 
-        with urlopen(req, timeout=10) as resp:
-            current_url = resp.url
-            html = resp.read().decode("utf-8", errors="ignore")
-
+        # 구글 뉴스 리다이렉트 처리
         if "news.google.com" in current_url or "news.url.google.com" in current_url:
-            m = re.search(r"data-n-au=[\"'](http[^\"']+)[\"']", html, re.IGNORECASE)
+            m = re.search(r"data-n-au=[\"'](http[^\"']+)[\"']", html, re.I)
             if not m:
-                m = re.search(r"<meta\s+http-equiv=[\"']refresh[\"']\s+content=[\"'][^;]+;\s*url=([^\"']+)[\"']", html, re.IGNORECASE)
+                m = re.search(r"<meta\s+http-equiv=[\"']refresh[\"']\s+content=[\"'][^;]+;\s*url=([^\"']+)[\"']", html, re.I)
             if not m:
-                m = re.search(r"<a\s+[^>]*href=[\"'](http[^\"']+)[\"'][^>]*>", html, re.IGNORECASE)
+                m = re.search(r"<a\s+[^>]*href=[\"'](http[^\"']+)[\"'][^>]*>", html, re.I)
             if m:
                 real_url = m.group(1).replace("&amp;", "&")
                 if real_url and real_url != url:
                     return get_article_info(real_url, depth=depth + 1)
             return None, None
 
-        def extract_meta(html_text, meta_name):
-            pat1 = rf"<meta\s+[^>]*?(?:property|name)\s*=\s*[\"']{meta_name}[\"'][^>]*?content\s*=\s*[\"']([^\"']+)[\"']"
-            m = re.search(pat1, html_text, re.IGNORECASE)
-            if m:
-                return m.group(1).strip()
-            pat2 = rf"<meta\s+[^>]*?content\s*=\s*[\"']([^\"']+)[\"'][^>]*?(?:property|name)\s*=\s*[\"']{meta_name}[\"']"
-            m = re.search(pat2, html_text, re.IGNORECASE)
-            if m:
-                return m.group(1).strip()
-            return None
+        # 이미지 추출 시도
+        image_list = _extract_images_from_html(html, current_url)
+        snippet = _extract_snippet(html)
 
-        def looks_like_image_url(candidate: str) -> bool:
-            if not candidate:
-                return False
-            low = candidate.lower()
-            if low.startswith("data:image/"):
-                return True
-            if any(tok in low for tok in ["sprite", "icon", "logo", "favicon", "blank.", "placeholder"]):
-                return False
-            return any(x in low for x in [".jpg", ".jpeg", ".png", ".webp", ".gif", "image", "thumb", "photo", "upload", "cdn", "media"])
+        # ② Googlebot으로 이미지를 못 찾았으면 일반 브라우저 UA로 재시도
+        if not image_list:
+            try:
+                current_url2, html2 = _fetch_html(url, USER_AGENT)
+                image_list = _extract_images_from_html(html2, current_url2)
+                if not snippet:
+                    snippet = _extract_snippet(html2)
+            except Exception:
+                pass
 
-        image = None
-        image_candidates = []
-        for raw in [
-            extract_meta(html, "og:image"),
-            extract_meta(html, "og:image:url"),
-            extract_meta(html, "twitter:image"),
-            extract_meta(html, "twitter:image:src"),
-        ]:
-            if raw:
-                image_candidates.append(raw)
-
-        for m in re.finditer(r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>", html, re.IGNORECASE | re.DOTALL):
-            block = m.group(1)
-            for pat in [r'"image"\s*:\s*"([^"]+)"', r'"thumbnailUrl"\s*:\s*"([^"]+)"']:
-                mm = re.search(pat, block, re.IGNORECASE | re.DOTALL)
-                if mm:
-                    image_candidates.append(mm.group(1))
-            for arr in re.finditer(r'"image"\s*:\s*\[(.*?)\]', block, re.IGNORECASE | re.DOTALL):
-                for u in re.findall(r'"(https?:\\/\\/[^"\\]+|\\/[^"\\]+)"', arr.group(1)):
-                    image_candidates.append(u)
-
-        img_patterns = [
-            r'<img[^>]+(?:data-src|data-original|data-lazy-src|data-srcset|srcset|src)=["\']([^"\']+)["\'][^>]*(?:class|id|itemprop)=["\'][^"\']*(?:thumb|thumbnail|image|photo|figure|article|news|hero|lead|main)[^"\']*["\']',
-            r'<img[^>]*(?:class|id|itemprop)=["\'][^"\']*(?:thumb|thumbnail|image|photo|figure|article|news|hero|lead|main)[^"\']*["\'][^>]+(?:data-src|data-original|data-lazy-src|data-srcset|srcset|src)=["\']([^"\']+)["\']',
-            r'<img[^>]+(?:data-src|data-original|data-lazy-src|data-srcset|srcset|src)=["\']([^"\']+)["\']',
-        ]
-        for pat in img_patterns:
-            for mm in re.finditer(pat, html, re.IGNORECASE | re.DOTALL):
-                cand = mm.group(1)
-                if looks_like_image_url(cand):
-                    image_candidates.append(cand)
-
-        seen = set()
-        for raw in image_candidates:
-            raw = (raw or '').replace('/', '/').strip()
-            if ',' in raw and ' ' in raw:
-                raw = raw.split(',')[0].strip().split()[0]
-            final_img = make_absolute_url(current_url, raw)
-            if not final_img or final_img in seen:
-                continue
-            seen.add(final_img)
-            low = final_img.lower()
-            if "lh3.googleusercontent.com" in low or "news.google.com" in low:
-                continue
-            if any(tok in low for tok in ["sprite", "icon", "logo", "favicon", "/ads/"]):
-                continue
-            image = final_img
-            break
-
-        snippet = None
-        meta_candidates = [
-            extract_meta(html, "og:description"),
-            extract_meta(html, "twitter:description"),
-            extract_meta(html, "description"),
-        ]
-        for snippet_raw in meta_candidates:
-            cand = clean_spaces(snippet_raw) if snippet_raw else None
-            if cand and is_valid_snippet(cand):
-                snippet = cand
-                break
-
-        if not snippet:
-            html_candidates = extract_candidate_snippets_from_html(html)
-            if html_candidates:
-                snippet = html_candidates[0]
-
+        image = image_list[0] if image_list else None
         return image, snippet
 
     except Exception:
@@ -655,6 +739,15 @@ def fetch_naver_articles(keyword):
         print(f"  [NAVER/{keyword}] ({score}) {title[:50]}...")
 
         image, snippet = get_article_info(link)
+
+        # 원문에서 이미지를 못 찾았으면 네이버 캐시 링크로 재시도
+        naver_link = item.get("link", "")
+        if not image and naver_link and naver_link != link:
+            image2, snippet2 = get_article_info(naver_link)
+            if image2:
+                image = image2
+            if not snippet and snippet2:
+                snippet = snippet2
 
         if not desc or normalize_text(desc) == normalize_text(title):
             desc = snippet or ""
@@ -1306,7 +1399,15 @@ if __name__ == "__main__":
     total_found = sum(len(v) for v in all_articles.values())
     print(f"✅ 중복 제거 완료 (제거: {removed_count}건, 최종: {total_found}건)")
 
+    # 이미지 URL 추출 성공률 로그
+    img_found = sum(1 for arts in all_articles.values() for a in arts if a.get("image"))
+    img_total = sum(len(arts) for arts in all_articles.values())
+    print(f"📊 이미지 URL 추출: {img_found}/{img_total}건 ({img_found*100//max(img_total,1)}%)")
+
+    print("🖼️ 이미지 다운로드 및 최적화 중...")
     inline_images = prepare_inline_images(all_articles)
+    print(f"  → 이미지 {len(inline_images)}개 준비 완료")
+
     html = to_html(all_articles)
     send_mail(html, inline_images)
-    print(f"✅ 전체 완료 (발송 기사: {total_found}건)")
+    print(f"✅ 전체 완료 (발송 기사: {total_found}건, 썸네일: {len(inline_images)}건)")
