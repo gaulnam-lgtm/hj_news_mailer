@@ -1261,7 +1261,7 @@ def to_html(all_articles):
 <tr>
   <td style="padding:22px 32px 10px 32px;font-size:14px;line-height:22px;color:#1d497c;">
     <b>안녕하세요.<br>
-    최근 일주일간 키워드별 주요 기사를 정리해 공유드립니다.</b>
+    최근 일주일간의 앱 마켓 주요 동향 기사를 키워드별로 정리해 공유드립니다.</b>
   </td>
 </tr>
 
