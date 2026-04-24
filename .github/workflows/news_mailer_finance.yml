@@ -1,0 +1,27 @@
+name: 금융 뉴스레터 발송
+on:
+  repository_dispatch:
+    types: [finance-daily-trigger]
+  workflow_dispatch:
+env:
+  TZ: Asia/Seoul
+jobs:
+  send-finance-news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v6
+      - name: Python 설치
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 패키지 설치
+        run: pip install Pillow
+      - name: 금융 뉴스레터 발송
+        env:
+          GMAIL_ID:             ${{ secrets.GMAIL_ID }}
+          GMAIL_APP_PASSWORD:   ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO_FINANCE:      ${{ secrets.MAIL_TO_FINANCE }}
+          NAVER_CLIENT_ID:      ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET:  ${{ secrets.NAVER_CLIENT_SECRET }}
+        run: python news_mailer_finance.py
