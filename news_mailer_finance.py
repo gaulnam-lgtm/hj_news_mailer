@@ -740,7 +740,7 @@ def send_mail(html, inline_images):
         smtp.login(GMAIL_ID, GMAIL_PW)
         for r in recipients:
             msg = MIMEMultipart("related")
-            msg["Subject"] = f"[디지털 혁신 뉴스레터] {today}"
+            msg["Subject"] = f"[디지털 혁신] {today}"
             msg["From"]    = formataddr((str(Header("디지털 혁신 뉴스", "utf-8")), f"{GMAIL_ID}@gmail.com"))
             msg["To"]      = r
 
