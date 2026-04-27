@@ -1,4 +1,4 @@
-name: 금융 뉴스레터 발송
+name: 디지털 혁신 뉴스레터 발송
 on:
   repository_dispatch:
     types: [finance-daily-trigger]
@@ -17,7 +17,7 @@ jobs:
           python-version: '3.11'
       - name: 패키지 설치
         run: pip install Pillow
-      - name: 금융 뉴스레터 발송
+      - name: 디지털 혁신 뉴스레터 발송
         env:
           GMAIL_ID:             ${{ secrets.GMAIL_ID }}
           GMAIL_APP_PASSWORD:   ${{ secrets.GMAIL_APP_PASSWORD }}
