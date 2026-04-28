@@ -682,11 +682,11 @@ def to_html(all_articles):
         <td style="vertical-align:middle;">
           <div style="font-size:13px;font-weight:800;letter-spacing:3px;
                       color:#065f46;margin-bottom:11px;font-family:Arial,sans-serif;">
-            &#128200;&nbsp;&nbsp;Daily Digital Innovation News
+            &#128200;&nbsp;&nbsp;Daily AI & Crypto Daily Briefing
           </div>
           <div style="margin-bottom:11px;">
             <img src="https://raw.githubusercontent.com/gaulnam-lgtm/hj_news_mailer/main/finance1.png?v={CACHE_BUST}"
-                 alt="일간 디지털 혁신 뉴스레터"
+                 alt="AI & Crypto 데일리 브리핑"
                  style="max-height:60px;width:auto;display:block;">
           </div>
           <div style="font-size:13px;line-height:1.35;color:#333333;font-family:Arial,sans-serif;">
@@ -707,7 +707,7 @@ def to_html(all_articles):
   <!-- 인사말 -->
   <tr>
     <td style="padding:22px 32px 10px;font-size:14px;line-height:22px;color:#475569;">
-      최근 3일간 키워드별 주요 디지털 혁신 관련 기사를 정리했습니다.
+      최근 3일간 AI 및 Crypto 관련 기사를 정리했습니다.
     </td>
   </tr>
 
@@ -723,7 +723,7 @@ def to_html(all_articles):
     linear-gradient(135deg, #f0fdf4 0%, #fffbeb 50%, #eff6ff 100%);
                padding:18px 32px;text-align:center;border-radius:0 0 20px 20px;">
       <div style="font-size:11px;color:#065f46;font-family:Arial,sans-serif;">
-        디지털 혁신 뉴스레터 &middot; 자동 발송 &middot; {today}
+        AI & Crypto 데일리 브리핑 &middot; 자동 발송 &middot; {today}
       </div>
     </td>
   </tr>
@@ -740,8 +740,8 @@ def send_mail(html, inline_images):
         smtp.login(GMAIL_ID, GMAIL_PW)
         for r in recipients:
             msg = MIMEMultipart("related")
-            msg["Subject"] = f"[디지털 혁신] {today}"
-            msg["From"]    = formataddr((str(Header("디지털 혁신 뉴스", "utf-8")), f"{GMAIL_ID}@gmail.com"))
+            msg["Subject"] = f"[AI & Crypto] {today}"
+            msg["From"]    = formataddr((str(Header("AI & Crypto", "utf-8")), f"{GMAIL_ID}@gmail.com"))
             msg["To"]      = r
 
             alt = MIMEMultipart("alternative")
