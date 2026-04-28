@@ -682,7 +682,7 @@ def to_html(all_articles):
         <td style="vertical-align:middle;">
           <div style="font-size:13px;font-weight:800;letter-spacing:3px;
                       color:#065f46;margin-bottom:11px;font-family:Arial,sans-serif;">
-            &#128200;&nbsp;&nbsp;Daily AI & Crypto Daily Briefing
+            &#128200;&nbsp;&nbsp;AI & Crypto Daily Briefing
           </div>
           <div style="margin-bottom:11px;">
             <img src="https://raw.githubusercontent.com/gaulnam-lgtm/hj_news_mailer/main/finance1.png?v={CACHE_BUST}"
