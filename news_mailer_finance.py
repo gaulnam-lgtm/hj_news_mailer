@@ -694,10 +694,9 @@ def to_html(all_articles):
           </div>
         </td>
         <!-- 오른쪽: 이미지 영역 -->
-        <td style="vertical-align:bottom;text-align:right;width:250px;padding:0;overflow:hidden;">
-          <img src="https://raw.githubusercontent.com/gaulnam-lgtm/hj_news_mailer/main/finance2.png?v={CACHE_BUST}"
-               alt=""
-               style="width:250px;max-height:130px;object-fit:contain;object-position:bottom;display:block;margin-left:auto;vertical-align:bottom;">
+        <td style="vertical-align:middle;text-align:right;width:250px;padding:0;">
+        <img src="https://raw.githubusercontent.com/gaulnam-lgtm/hj_news_mailer/main/finance2.png?v={CACHE_BUST}"
+       style="width:100%;height:100%;object-fit:cover;display:block;">
         </td>
       </tr>
     </table>
